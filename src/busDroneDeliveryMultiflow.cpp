@@ -43,6 +43,12 @@ int main(int argc, char **argv) {
 		filename = foldername + "/" + STOP_TIMES_FILE;
 		sim.importStopTimes(filename);
 
+		filename = foldername + "/" + HOMES_FILE;
+		sim.importHomes(filename);
+
+		filename = foldername + "/" + DELIVERYPOINTS_FILE;
+		sim.importDeliveryPoints(filename);
+
 		const std::string &poiFileName = input.getCmdOption("-pFile");
 		if (!poiFileName.empty()) {
 			filename = poiFileName;
@@ -73,6 +79,12 @@ int main(int argc, char **argv) {
 
 		filename = exportfoldername + "/" + POI_FILE;
 		sim.exportPoi(filename);
+
+		filename = exportfoldername + "/" + HOMES_FILE;
+		sim.exportHomes(filename);
+
+		filename = exportfoldername + "/" + DELIVERYPOINTS_FILE;
+		sim.exportDeliveryPoints(filename);
 
 		exit (EXIT_SUCCESS);
 	}
@@ -105,10 +117,11 @@ int main(int argc, char **argv) {
 		sim.setUav(12);
 	}
 
-	const std::string &tpsFileName = input.getCmdOption("-tsp");
+	//const std::string &tpsFileName = input.getCmdOption("-tsp");
 
 	// init the simulation
-	if (!sim.init(tpsFileName)) {
+	//if (!sim.init(tpsFileName)) {
+	if (!sim.init()) {
 		cout << "Error initializing the simulation" << endl;
 		return EXIT_FAILURE;
 	}

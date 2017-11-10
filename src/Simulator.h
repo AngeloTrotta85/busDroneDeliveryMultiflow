@@ -31,6 +31,10 @@
 #include "BestPoiGraph.h"
 #include "WorstUav.h"
 
+#include "BatteriesManager.h"
+#include "Home.h"
+#include "DeliveryPoint.h"
+
 
 #define AGENCY_FILE 					"agency.txt"
 #define AGENCY_FILE_SIZE 				2.0
@@ -54,6 +58,9 @@
 #define FERMATE_FILE_SIZE  				9877.0
 #define POI_FILE  						"poi.txt"
 #define POI_FILE_SIZE  					11.0
+
+#define HOMES_FILE  					"homes.txt"
+#define DELIVERYPOINTS_FILE  			"deliveryPoints.txt"
 
 #define OUTPUT_STATS_FILE  				"outStats.txt"
 
@@ -95,7 +102,8 @@ public:
 	virtual ~Simulator();
 
 	void run(void);
-	bool init(std::string tpsFileName);
+	bool init(void);
+	//bool init(std::string tpsFileName);
 	void stats(std::string outFileName);
 
 	bool importStops(std::string stopsFileName);
@@ -103,12 +111,16 @@ public:
 	bool importCalendarDates(std::string stopsFileName);
 	bool importStopTimes(std::string stopsFileName);
 	bool importPoi(std::string poiFileName);
+	bool importHomes(std::string homesFileName);
+	bool importDeliveryPoints(std::string deliverypointsFileName);
 
 	bool exportStops(std::string stopsFileName);
 	bool exportTrips(std::string tripsFileName);
 	bool exportCalendarDates(std::string calendarDAtesFileName);
 	bool exportStopTimes(std::string stopTimesFileName);
 	bool exportPoi(std::string poiFileName);
+	bool exportHomes(std::string homesFileName);
+	bool exportDeliveryPoints(std::string deliverypointsFileName);
 
 	bool exportDotResult(std::string dotFileName);
 
@@ -222,6 +234,10 @@ private:
 	std::map<std::string, std::map<unsigned long int, StopTimes> > stopTimesMapMap;
 	std::map<unsigned long int, Poi> poiMap;
 	std::map<std::string, BusRoute> busRouteMap;
+
+public:
+	std::map<unsigned int, Home> homesMap;
+	std::map<unsigned int, DeliveryPoint> deliveryPointsMap;
 
 	std::list<Uav *> listUav;
 

@@ -61,6 +61,12 @@ public:
 		NOT_VISITED,
 		DISCOVERED
 	} BFS_STATE;
+
+	typedef enum {
+		STOP,
+		HOME,
+		DELIVERY_POINT
+	} NODE_TYPE;
 /*public:
 	typedef enum {
 		STOP,
@@ -74,9 +80,11 @@ public:
 		ARC_TYPE arc_t;
 	} ARC;*/
 public:
-	NodeGraph(unsigned int t, unsigned int s){
+	NodeGraph(unsigned int t, unsigned int id, NODE_TYPE type){
 		time = t;
-		stop_id = s;
+		//stop_id = s;
+		node_id = id;
+		node_t = type;
 		bfs_state = NOT_VISITED;
 		distenace_from_root = std::numeric_limits<int>::max();
 		predecessor_arc = nullptr;
@@ -88,7 +96,9 @@ public:
 
 public:
 	unsigned int time;
-	unsigned int stop_id;
+	//unsigned int stop_id;
+	unsigned int node_id;
+	NODE_TYPE node_t;
 	std::list<ArcGraph *> arcs;
 	std::list<Uav *> uavs;
 
@@ -107,7 +117,11 @@ public:
 	void execute(struct std::tm time, std::list<Uav *> &uavList);
 
 	void addInitStop(unsigned int stop, struct std::tm time);
+	void addInitHome(unsigned int home, struct std::tm time);
+	void addInitDeliveryPoint(unsigned int dp, struct std::tm time);
 	void addFollowingStop(unsigned int stop, struct std::tm time);
+	void addFollowingHome(unsigned int home, struct std::tm time);
+	void addFollowingDeliveryPoint(unsigned int dp, struct std::tm time);
 	void generateStaticArcs(unsigned int stop, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE, Poi *p = nullptr);
 	void generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd);
 
@@ -139,6 +153,7 @@ public:
 
 protected:
 	std::map<unsigned int, std::map<unsigned int, NodeGraph *> > graphMapMap;
+	std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::map<unsigned int, NodeGraph *> > > graphMapMapMap;
 	std::map<unsigned int, std::vector<NodeGraph *> > graphMapVec;
 	std::list<ArcGraph *> activeArc;
 

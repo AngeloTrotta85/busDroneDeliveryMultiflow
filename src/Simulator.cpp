@@ -562,6 +562,97 @@ bool Simulator::importPoi(std::string poiFileName) {
 	}
 }
 
+
+bool Simulator::importHomes(std::string homesFileName) {
+	int rowCount;
+	std::string str;
+
+	cout << "START PARSING HOMES" << endl;
+
+	std::ifstream fileHomes(homesFileName, std::ifstream::in);
+	if(!fileHomes.is_open()) return false;
+
+	std::getline(fileHomes, str); // read first line
+	rowCount = 0;
+	while (std::getline(fileHomes, str)) {
+
+		str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
+		str.erase(std::remove(str.begin(), str.end(), '\r'), str.end());
+
+		if (str.substr(0, 1).compare("#") == 0) {
+			continue;
+		}
+		else {
+			Home newHome;
+			newHome.setSimulator(this);
+
+			if(newHome.parseInput(str)){
+				newHome.init(start_sim_time_tm);
+				//newHome.wa.setDefaultWeight_grams(waDefaultW);
+				//newHome.wa.setPacketInitNumber(waPckInitNum);
+				//newHome.wa.setPacketGenerationRate(waPckGenRate);
+				//newHome.setWA_parameters(waDefaultW, waPckInitNum, waPckGenRate);
+				homesMap[newHome.getHomeIdNum()] = newHome;
+			}
+			else {
+				cerr << "Error parsing Stops -> " << str << endl;
+				return EXIT_FAILURE;
+			}
+		}
+
+		rowCount++;
+		fprintf(stdout, "\rHomes parsing: %d", rowCount);
+	}
+	//cout << endl;
+	cout << "  -  Parsed " << homesMap.size() << " homes" << endl; // out of " << (STOPS_FILE_SMALL_SIZE - 1) << endl;
+	fileHomes.close();
+	//cout << "END PARSING STOPS. Imported " << db.getStopsSize() << " out of " << (STOPS_FILE_SIZE - 1) << endl << endl;
+
+	return true;
+}
+
+bool Simulator::importDeliveryPoints(std::string deliverypointsFileName) {
+	int rowCount;
+	std::string str;
+
+	cout << "START PARSING DELIVERY POINTS" << endl;
+
+	std::ifstream fileDP(deliverypointsFileName, std::ifstream::in);
+	if(!fileDP.is_open()) return false;
+
+	std::getline(fileDP, str); // read first line
+	rowCount = 0;
+	while (std::getline(fileDP, str)) {
+
+		str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
+		str.erase(std::remove(str.begin(), str.end(), '\r'), str.end());
+
+		if (str.substr(0, 1).compare("#") == 0) {
+			continue;
+		}
+		else {
+			DeliveryPoint newDP;
+
+			if(newDP.parseInput(str)){
+				deliveryPointsMap[newDP.getDpIdNum()] = newDP;
+			}
+			else {
+				cerr << "Error parsing Delivery Point -> " << str << endl;
+				return EXIT_FAILURE;
+			}
+		}
+
+		rowCount++;
+		fprintf(stdout, "\rDelivery Points parsing: %d", rowCount);
+	}
+	//cout << endl;
+	cout << "  -  Parsed " << deliveryPointsMap.size() << " delivery points" << endl; // out of " << (STOPS_FILE_SMALL_SIZE - 1) << endl;
+	fileDP.close();
+	//cout << "END PARSING STOPS. Imported " << db.getStopsSize() << " out of " << (STOPS_FILE_SIZE - 1) << endl << endl;
+
+	return true;
+}
+
 bool Simulator::exportStops(std::string stopsFileName) {
 	std::ofstream stopsStream(stopsFileName, std::ofstream::out);
 
@@ -662,6 +753,52 @@ bool Simulator::exportPoi(std::string poiFileName) {
 	}
 
 	poiStream.close();
+
+	return true;
+}
+
+bool Simulator::exportHomes(std::string homesFileName) {
+	std::ofstream homesStream(homesFileName, std::ofstream::out);
+
+	if (!homesStream.is_open()) return false;
+
+	homesStream << "home_id,home_name,home_lat,home_lon,wa_pkt_w,wa_pkt_init,wa_pkt_genrate,charg_num,charg_batt_init_num,charg_batt_init_val" << endl;
+
+	for (auto& ss : homesMap) {
+		homesStream << "\"" << ss.second.getHomeIdNum() << "\","
+				<< "\"" << ss.second.getHomeName() << "\","
+				<< "\"" << ss.second.getHomeLat() << "\","
+				<< "\"" << ss.second.getHomeLon() << "\","
+				<< "\"" << ss.second.getHomeWaDefpktW() << "\","
+				<< "\"" << ss.second.getHomeWaPktInitnum() << "\","
+				<< "\"" << ss.second.getHomeWaPktGenrate() << "\","
+				<< "\"" << ss.second.getHomeChargNum() << "\","
+				<< "\"" << ss.second.getHomeChargBattInitnum() << "\","
+				<< "\"" << ss.second.getHomeChargBattInitval() << "\""
+				<< endl;
+	}
+
+	homesStream.close();
+
+	return true;
+}
+
+bool Simulator::exportDeliveryPoints(std::string deliverypointsFileName) {
+	std::ofstream deliverypointsStream(deliverypointsFileName, std::ofstream::out);
+
+	if (!deliverypointsStream.is_open()) return false;
+
+	deliverypointsStream << "dp_id,dp_name,dp_lat,dp_lon" << endl;
+
+	for (auto& ss : deliveryPointsMap) {
+		deliverypointsStream << "\"" << ss.second.getDpId() << "\","
+				<< "\"" << ss.second.getDpName() << "\","
+				<< "\"" << ss.second.getDpLat() << "\","
+				<< "\"" << ss.second.getDpLon() << "\""
+				<< endl;
+	}
+
+	deliverypointsStream.close();
 
 	return true;
 }
@@ -902,6 +1039,12 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 	for (auto& st : stopsMap) {
 		flowGraph->addInitStop(st.second.getStopIdNum(), act_time);
 	}
+	for (auto& ho : homesMap) {
+		flowGraph->addInitHome(ho.second.getHomeIdNum(), act_time);
+	}
+	for (auto& dp : deliveryPointsMap) {
+		flowGraph->addInitDeliveryPoint(dp.second.getDpIdNum(), act_time);
+	}
 	act_time.tm_sec = act_time.tm_sec + 1;
 	mktime(&act_time);
 
@@ -912,6 +1055,12 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 		for (auto& st : stopsMap) {
 			flowGraph->addFollowingStop(st.second.getStopIdNum(), act_time);
 			flowGraph->generateStaticArcs(st.second.getStopIdNum(), before_time, act_time, ArcGraph::STOP);
+		}
+		for (auto& hh : homesMap) {
+			flowGraph->addFollowingHome(hh.second.getHomeIdNum(), act_time);
+		}
+		for (auto& dp : deliveryPointsMap) {
+			flowGraph->addFollowingDeliveryPoint(dp.second.getDpIdNum(), act_time);
 		}
 
 		for (auto& poi : poiMap) {
@@ -960,7 +1109,8 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 	cout << endl << "END GENERATING BUSES ARCS" << endl; fflush(stdout);
 }
 
-bool Simulator::init(std::string tpsFileName) {
+//bool Simulator::init(std::string tpsFileName) {
+bool Simulator::init(void) {
 
 	bool ris = true;
 

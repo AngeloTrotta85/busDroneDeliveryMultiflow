@@ -25,18 +25,86 @@ FlowGraph::~FlowGraph() {
 }
 
 void FlowGraph::addInitStop(unsigned int stop, struct std::tm time) {
-	NodeGraph *ng = new NodeGraph(day_tm2seconds(time), stop);
+	NodeGraph *ng = new NodeGraph(day_tm2seconds(time), stop, NodeGraph::STOP);
+
+	//TODO DEPRECATED remove graphMapMap
 	if (graphMapMap.count(stop) == 0) {
 		std::map<unsigned int, NodeGraph *> newMap;
 		graphMapMap[stop] = newMap;
 	}
 	graphMapMap[stop][day_tm2seconds(time)] = ng;
+	////////////////////////////////////
+
+	if (graphMapMapMap.count(NodeGraph::STOP) == 0) {
+		std::map<unsigned int, std::map<unsigned int, NodeGraph *> > newMap;
+		graphMapMapMap[NodeGraph::STOP] = newMap;
+	}
+	if (graphMapMapMap[NodeGraph::STOP].count(stop) == 0) {
+		std::map<unsigned int, NodeGraph *> newMap;
+		graphMapMapMap[NodeGraph::STOP][stop] = newMap;
+	}
+	graphMapMapMap[NodeGraph::STOP][stop][day_tm2seconds(time)] = ng;
+}
+
+void FlowGraph::addInitHome(unsigned int home, struct std::tm time) {
+	NodeGraph *ng = new NodeGraph(day_tm2seconds(time), home, NodeGraph::HOME);
+
+	if (graphMapMapMap.count(NodeGraph::HOME) == 0) {
+		std::map<unsigned int, std::map<unsigned int, NodeGraph *> > newMap;
+		graphMapMapMap[NodeGraph::HOME] = newMap;
+	}
+	if (graphMapMapMap[NodeGraph::HOME].count(home) == 0) {
+		std::map<unsigned int, NodeGraph *> newMap;
+		graphMapMapMap[NodeGraph::HOME][home] = newMap;
+	}
+	graphMapMapMap[NodeGraph::HOME][home][day_tm2seconds(time)] = ng;
+}
+
+void FlowGraph::addInitDeliveryPoint(unsigned int dp, struct std::tm time) {
+	NodeGraph *ng = new NodeGraph(day_tm2seconds(time), dp, NodeGraph::DELIVERY_POINT);
+
+	if (graphMapMapMap.count(NodeGraph::DELIVERY_POINT) == 0) {
+		std::map<unsigned int, std::map<unsigned int, NodeGraph *> > newMap;
+		graphMapMapMap[NodeGraph::DELIVERY_POINT] = newMap;
+	}
+	if (graphMapMapMap[NodeGraph::DELIVERY_POINT].count(dp) == 0) {
+		std::map<unsigned int, NodeGraph *> newMap;
+		graphMapMapMap[NodeGraph::DELIVERY_POINT][dp] = newMap;
+	}
+	graphMapMapMap[NodeGraph::DELIVERY_POINT][dp][day_tm2seconds(time)] = ng;
 }
 
 void FlowGraph::addFollowingStop(unsigned int stop, struct std::tm time) {
-	if (graphMapMap.count(stop) > 0) {
-		NodeGraph *ng = new NodeGraph(day_tm2seconds(time), stop);
+	//TODO DEPRECATED remove graphMapMap
+	if (graphMapMap.count(NodeGraph::STOP) > 0) {
+		NodeGraph *ng = new NodeGraph(day_tm2seconds(time), stop, NodeGraph::STOP);
 		graphMapMap[stop][day_tm2seconds(time)] = ng;
+	}
+	////////////////////////////////////
+
+	if (graphMapMapMap.count(NodeGraph::STOP) > 0) {
+		if (graphMapMapMap[NodeGraph::STOP].count(stop) > 0) {
+			NodeGraph *ng = new NodeGraph(day_tm2seconds(time), stop, NodeGraph::STOP);
+			graphMapMapMap[NodeGraph::STOP][stop][day_tm2seconds(time)] = ng;
+		}
+	}
+}
+
+void FlowGraph::addFollowingHome(unsigned int home, struct std::tm time) {
+	if (graphMapMapMap.count(NodeGraph::HOME) > 0) {
+		if (graphMapMapMap[NodeGraph::HOME].count(home) > 0) {
+			NodeGraph *ng = new NodeGraph(day_tm2seconds(time), home, NodeGraph::HOME);
+			graphMapMapMap[NodeGraph::HOME][home][day_tm2seconds(time)] = ng;
+		}
+	}
+}
+
+void FlowGraph::addFollowingDeliveryPoint(unsigned int dp, struct std::tm time) {
+	if (graphMapMapMap.count(NodeGraph::DELIVERY_POINT) > 0) {
+		if (graphMapMapMap[NodeGraph::DELIVERY_POINT].count(dp) > 0) {
+			NodeGraph *ng = new NodeGraph(day_tm2seconds(time), dp, NodeGraph::DELIVERY_POINT);
+			graphMapMapMap[NodeGraph::DELIVERY_POINT][dp][day_tm2seconds(time)] = ng;
+		}
 	}
 }
 
