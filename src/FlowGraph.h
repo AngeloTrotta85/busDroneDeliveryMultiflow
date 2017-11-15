@@ -33,13 +33,15 @@ public:
 	typedef enum {
 		STOP,
 		COVER,
-		BUS
+		BUS,
+		FLY_EMPTY,
+		FLY_WITH_PACKAGE,
+		RECHARGE_HOME
 	} ARC_TYPE;
 public:
 	ArcGraph(){
 		src = nullptr;
 		dest = nullptr;
-		p = nullptr;
 		arc_t = STOP;
 		reserved = false;
 	};
@@ -50,7 +52,6 @@ public:
 	NodeGraph *dest;
 	ARC_TYPE arc_t;
 	std::list<Uav *> uavOnTheArc;
-	Poi *p;
 	bool reserved;
 };
 
@@ -123,7 +124,10 @@ public:
 	void addFollowingHome(unsigned int home, struct std::tm time);
 	void addFollowingDeliveryPoint(unsigned int dp, struct std::tm time);
 	void generateStaticArcs(unsigned int stop, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE, Poi *p = nullptr);
+	void generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
+	void generateStaticArcsHome(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
 	void generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd);
+	void generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id, struct std::tm a_time, NodeGraph::NODE_TYPE a_type, unsigned int a_id, ArcGraph::ARC_TYPE at);
 
 	virtual void setInitExtraUAV(std::list <Uav *> &remainingUAV, struct std::tm time_tm, std::map<unsigned long int, Stops> &stopsMap);
 	void setUavPosition(struct std::tm time, Uav *uav);

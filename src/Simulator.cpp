@@ -174,6 +174,15 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 		initialUavEnergy = 130000;
 	}
 
+	// UAV AVERAGE SPEED
+	const std::string &avgSpeedString = inputVal->getCmdOption("-avgS");
+	if (!avgSpeedString.empty()) {
+		uavAvgSpeed = atof(avgSpeedString.c_str());
+	}
+	else {
+		uavAvgSpeed = 20;
+	}
+
 	// ENERGY IF UAV IS IN STOP-ARC
 	const std::string &eStopString = inputVal->getCmdOption("-eSTOP");
 	if (!eStopString.empty()) {
@@ -1015,6 +1024,27 @@ void Simulator::updateBatteries(Uav *u) {
 	}
 }
 
+void Simulator::generateBothFlyArc(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id, double s_lat, double s_lon,
+		NodeGraph::NODE_TYPE a_type, unsigned int a_id, double a_lat, double a_lon, double w) {
+	int flytime;
+	struct std::tm arrival_time;
+	ArcGraph::ARC_TYPE at = (w > 0) ? ArcGraph::FLY_WITH_PACKAGE : ArcGraph::FLY_EMPTY;
+
+	flytime = Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, 0);
+	arrival_time = s_time;
+	arrival_time.tm_sec = arrival_time.tm_sec + flytime;
+	mktime(&arrival_time);
+	flowGraph->generateFlyArcs(s_time, s_type, s_id, arrival_time, a_type, a_id, ArcGraph::FLY_EMPTY);
+
+	flytime = Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, w);
+	arrival_time = s_time;
+	arrival_time.tm_sec = arrival_time.tm_sec + flytime;
+	mktime(&arrival_time);
+	flowGraph->generateFlyArcs(s_time, s_type, s_id, arrival_time, a_type, a_id, ArcGraph::FLY_WITH_PACKAGE);
+
+}
+
+
 void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time) {
 	//char buffer[64];
 	struct std::tm before_time;
@@ -1045,9 +1075,9 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 	for (auto& dp : deliveryPointsMap) {
 		flowGraph->addInitDeliveryPoint(dp.second.getDpIdNum(), act_time);
 	}
+
 	act_time.tm_sec = act_time.tm_sec + 1;
 	mktime(&act_time);
-
 	while (difftime(mktime(&end_time), mktime(&act_time)) >= 0) {
 
 		//struct std::tm before_time = act_time;
@@ -1055,22 +1085,27 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 		for (auto& st : stopsMap) {
 			flowGraph->addFollowingStop(st.second.getStopIdNum(), act_time);
 			flowGraph->generateStaticArcs(st.second.getStopIdNum(), before_time, act_time, ArcGraph::STOP);
+			flowGraph->generateStaticArcsStop(st.second.getStopIdNum(), before_time, act_time, ArcGraph::STOP);
 		}
 		for (auto& hh : homesMap) {
 			flowGraph->addFollowingHome(hh.second.getHomeIdNum(), act_time);
+			flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::STOP);
+			for (int ii = 0; ii < hh.second.home_charg_num; ++ii) {
+				flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::RECHARGE_HOME);
+			}
 		}
 		for (auto& dp : deliveryPointsMap) {
 			flowGraph->addFollowingDeliveryPoint(dp.second.getDpIdNum(), act_time);
 		}
 
-		for (auto& poi : poiMap) {
+		/*for (auto& poi : poiMap) {
 			std::vector<Stops *> stPoi;
 
 			getNeighStop(poi.second.getPoiIdNum(), stPoi);
 			for (auto& st : stPoi) {
 				flowGraph->generateStaticArcs(st->getStopIdNum(), before_time, act_time, ArcGraph::COVER, &(poi.second));
 			}
-		}
+		}*/
 
 		//std::strftime(buffer, sizeof(buffer), "%a, %d.%m.%Y %H:%M:%S", &act_time);
 		//cout << "Clock time " << buffer << endl;
@@ -1088,7 +1123,6 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 		//before_time.tm_sec = before_time.tm_sec + 1;
 		//mktime(&before_time);
 		before_time = act_time;
-
 		act_time.tm_sec = act_time.tm_sec + 1;
 		mktime(&act_time);
 	}
@@ -1096,6 +1130,59 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 	cout << endl << "END GENERATING GRAPH NODES" << endl; fflush(stdout);
 
 	//flowGraph.generateStaticArcs();
+	double packageW = 1; //TODO
+	cout << "START GENERATING UAV_MOVEMENT ARCS" << endl; fflush(stdout);
+	act_time = start_time;
+	mktime(&act_time);
+	while (difftime(mktime(&end_time), mktime(&act_time)) >= 0) {
+
+		for (auto& st_start : stopsMap) {
+			for (auto& st_end : stopsMap) {
+				if (st_start.second.getStopIdNum() != st_end.second.getStopIdNum()) {
+					generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
+							NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+				}
+			}
+			for (auto& hh_end : homesMap) {
+				generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
+						NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+			}
+			for (auto& dp_end : deliveryPointsMap) {
+				generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
+						NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
+			}
+		}
+		for (auto& hh_start : homesMap) {
+			for (auto& st_end : stopsMap) {
+				generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
+						NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+			}
+			for (auto& hh_end : homesMap) {
+				if (hh_start.second.getHomeIdNum() != hh_end.second.getHomeIdNum()) {
+					generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
+							NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+				}
+			}
+			for (auto& dp_end : deliveryPointsMap) {
+				generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
+						NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
+			}
+		}
+		for (auto& dp_start : deliveryPointsMap) {
+			for (auto& st_end : stopsMap) {
+				generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
+						NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+			}
+			for (auto& hh_end : homesMap) {
+				generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
+						NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+			}
+		}
+
+		act_time.tm_sec = act_time.tm_sec + 1;
+		mktime(&act_time);
+	}
+	cout << endl << "END GENERATING UAV_MOVEMENT ARCS" << endl; fflush(stdout);
 
 	cout << "START GENERATING BUSES ARCS" << endl; fflush(stdout);
 	int c = 0;
@@ -1120,7 +1207,7 @@ bool Simulator::init(void) {
 	cout << "END GENERATING GRAPH" << endl; fflush(stdout);
 
 	cout << "BEGIN INIT FLOWGRAPH" << endl; fflush(stdout);
-	flowGraph->initPoi(poiMap, tpsFileName);
+	//flowGraph->initPoi(poiMap, tpsFileName);
 	cout << "END INIT FLOWGRAPH" << endl; fflush(stdout);
 
 	// init the UAVs

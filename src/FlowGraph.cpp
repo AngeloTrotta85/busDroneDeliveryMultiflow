@@ -120,6 +120,28 @@ void FlowGraph::generateStaticArcs(unsigned int stop, struct std::tm time1, stru
 	}
 }
 
+void FlowGraph::generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at) {
+	if ((graphMapMapMap.count(NodeGraph::STOP) > 0) && (graphMapMapMap[NodeGraph::STOP].count(id) > 0)) {
+
+		ArcGraph *newArcStop = new ArcGraph();
+		newArcStop->arc_t = at;
+		newArcStop->src = graphMapMapMap[NodeGraph::STOP][id][day_tm2seconds(time1)];
+		newArcStop->dest = graphMapMapMap[NodeGraph::STOP][id][day_tm2seconds(time2)];
+		graphMapMapMap[NodeGraph::STOP][id][day_tm2seconds(time1)]->arcs.push_back(newArcStop);
+	}
+}
+
+void FlowGraph::generateStaticArcsHome(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at) {
+	if ((graphMapMapMap.count(NodeGraph::HOME) > 0) && (graphMapMapMap[NodeGraph::HOME].count(id) > 0)) {
+
+		ArcGraph *newArcStop = new ArcGraph();
+		newArcStop->arc_t = at;
+		newArcStop->src = graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time1)];
+		newArcStop->dest = graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time2)];
+		graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time1)]->arcs.push_back(newArcStop);
+	}
+}
+
 void FlowGraph::generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd) {
 	unsigned int nodeStart, nodeDest;
 	unsigned int timeStart, timeDest;
@@ -155,6 +177,19 @@ void FlowGraph::generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBeg
 			nodeStart = nodeDest;
 			timeStart = timeDest;
 		}
+	}
+}
+
+void FlowGraph::generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id,
+		struct std::tm a_time, NodeGraph::NODE_TYPE a_type, unsigned int a_id, ArcGraph::ARC_TYPE at) {
+	if (((graphMapMapMap.count(s_type) > 0) && (graphMapMapMap[s_type].count(s_id) > 0) && (graphMapMapMap[s_type][s_id].count(day_tm2seconds(s_time)) > 0)) &&
+			((graphMapMapMap.count(a_type) > 0) && (graphMapMapMap[a_type].count(a_id) > 0) && (graphMapMapMap[a_type][a_id].count(day_tm2seconds(a_time)) > 0)) ){
+
+		ArcGraph *newArcStop = new ArcGraph();
+		newArcStop->arc_t = at;
+		newArcStop->src = graphMapMapMap[s_type][s_id][day_tm2seconds(s_time)];
+		newArcStop->dest = graphMapMapMap[a_type][a_id][day_tm2seconds(a_time)];
+		graphMapMapMap[s_type][s_id][day_tm2seconds(s_time)]->arcs.push_back(newArcStop);
 	}
 }
 

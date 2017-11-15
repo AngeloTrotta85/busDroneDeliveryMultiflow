@@ -190,6 +190,9 @@ private:
 
 	bool isInsideBoudaries(double lat, double lon);
 
+	void generateBothFlyArc(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id, double s_lat, double s_lon,
+			NodeGraph::NODE_TYPE a_type, unsigned int a_id, double a_lat, double a_lon, double w);
+
 private:
 	unsigned int time;
 	unsigned int timeslot;	//seconds
@@ -198,6 +201,7 @@ private:
 	unsigned int nUAV;
 
 	double initialUavEnergy; //Joule
+	double uavAvgSpeed;		 	// m/s
 
 	double maxDistancePoiStop; // meters
 

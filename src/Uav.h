@@ -51,6 +51,28 @@ public:
 	unsigned int getTimeOnBus() const {		return timeOnBus;	}
 	void addTimeOnBus(unsigned int timeOnBus_val) {		this->timeOnBus += timeOnBus_val;	}
 
+public:
+	static int getFlyTime_sec(double s_lat, double s_lon, double a_lat, double a_lon, double baseSpeed, double w) {
+		double dist = Simulator::distanceEarth(s_lat, s_lon, a_lat, a_lon);
+		double speedUAV;
+
+		if (w <= 0) {
+			speedUAV = baseSpeed;
+		}
+		else {
+			double maxW = 4000.0;
+			double packagePenality = 0.6;
+			if (w >= maxW) {
+				speedUAV = baseSpeed * packagePenality;
+			}
+			else {
+				speedUAV = (baseSpeed - ((baseSpeed * w * (1.0 - packagePenality)) / maxW));
+			}
+		}
+
+		return ((int) dist / speedUAV);
+	}
+
 private:
 	double resudualEnergy;
 	unsigned long int covering_poi_id;
