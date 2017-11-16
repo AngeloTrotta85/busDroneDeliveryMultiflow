@@ -48,15 +48,6 @@ int main(int argc, char **argv) {
 
 		filename = foldername + "/" + DELIVERYPOINTS_FILE;
 		sim.importDeliveryPoints(filename);
-
-		const std::string &poiFileName = input.getCmdOption("-pFile");
-		if (!poiFileName.empty()) {
-			filename = poiFileName;
-		}
-		else {
-			filename = foldername + "/" + POI_FILE;
-		}
-		sim.importPoi(filename);
 	}
 	else {
 		cerr << "Insert the input files folder" << endl;
@@ -76,9 +67,6 @@ int main(int argc, char **argv) {
 
 		filename = exportfoldername + "/" + STOP_TIMES_FILE;
 		sim.exportStopTimes(filename);
-
-		filename = exportfoldername + "/" + POI_FILE;
-		sim.exportPoi(filename);
 
 		filename = exportfoldername + "/" + HOMES_FILE;
 		sim.exportHomes(filename);

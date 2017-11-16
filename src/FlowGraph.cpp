@@ -108,17 +108,6 @@ void FlowGraph::addFollowingDeliveryPoint(unsigned int dp, struct std::tm time) 
 	}
 }
 
-void FlowGraph::generateStaticArcs(unsigned int stop, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at, Poi *p) {
-	if (graphMapMap.count(stop) > 0) {
-
-		ArcGraph *newArcStop = new ArcGraph();
-		newArcStop->arc_t = at;
-		newArcStop->p = p;
-		newArcStop->src = graphMapMap[stop][day_tm2seconds(time1)];
-		newArcStop->dest = graphMapMap[stop][day_tm2seconds(time2)];
-		graphMapMap[stop][day_tm2seconds(time1)]->arcs.push_back(newArcStop);
-	}
-}
 
 void FlowGraph::generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at) {
 	if ((graphMapMapMap.count(NodeGraph::STOP) > 0) && (graphMapMapMap[NodeGraph::STOP].count(id) > 0)) {
@@ -165,7 +154,6 @@ void FlowGraph::generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBeg
 					ArcGraph *newArcStop = new ArcGraph();
 
 					newArcStop->arc_t = ArcGraph::BUS;
-					newArcStop->p = nullptr;
 					newArcStop->src = graphMapMap[nodeStart][timeStart];
 					newArcStop->dest = graphMapMap[nodeDest][timeDest];
 
@@ -194,10 +182,12 @@ void FlowGraph::generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_ty
 }
 
 void FlowGraph::setUavPosition(struct std::tm time, Uav *uav) {
-	graphMapMap[uav->getPositionStopId()][day_tm2seconds(time)]->uavs.push_back(uav);
+	//TODO TODO graphMapMap[uav->getPositionStopId()][day_tm2seconds(time)]->uavs.push_back(uav);
 }
 
 void FlowGraph::setInitExtraUAV(std::list <Uav *> &remainingUAV, struct std::tm time_tm, std::map<unsigned long int, Stops> &stopsMap) {
+	//TODO TODO
+	/*
 	std::vector<Stops *> lStops;
 	for (auto& ss : stopsMap) {
 		lStops.push_back(&(ss.second));
@@ -207,14 +197,13 @@ void FlowGraph::setInitExtraUAV(std::list <Uav *> &remainingUAV, struct std::tm 
 	//setto gli altri in modo randomico
 	for (auto& uav : remainingUAV) {
 		uav->setState(Uav::UAV_FLYING);
-		uav->unsetCovering();
 		uav->setPositionStopId(lStops[(std::rand() % lStops.size())]->getStopIdNum());
 
 		setUavPosition(time_tm, uav);
 
 		cout << "UAV " << uav->getId() << " set on random stop: " << uav->getPositionStopId() << endl;
 	}
-
+*/
 }
 
 void FlowGraph::updateUavOnFlow(unsigned int time){
@@ -225,6 +214,8 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 	//}
 	//cout << endl;
 
+	//TODO TODO
+/*
 	for (auto itA = activeArc.begin(); itA != activeArc.end(); itA++) {
 		ArcGraph *a = *itA;
 		if (a->dest->time == time) {
@@ -256,6 +247,8 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 		}
 	}
 
+	*/
+
 	//cout << time << " AFTER  Active arc: ";
 	//for (auto& a : activeArc) {
 	//	cout << "Type: " << a->arc_t << "; U_N: " << a->uavOnTheArc.size() << " " << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << ". ";
@@ -266,6 +259,9 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 void FlowGraph::getMinimumPathAll(std::map<unsigned int, std::list<ArcGraph *> > &arcMapList, unsigned int stopStart, unsigned int timeStart) {
 	std::list<NodeGraph *> q;
 	std::map<unsigned int, NodeGraph *> minimumTimeMap;
+
+	//TODO TODO
+/*
 
 	//cout << endl << "START getMinimumPathAll" << endl; fflush(stdout);
 
@@ -311,7 +307,7 @@ void FlowGraph::getMinimumPathAll(std::map<unsigned int, std::list<ArcGraph *> >
 
 			// check if I need to go forward or I found already all the minimum paths
 			//cout << "starting checking end" << endl; fflush(stdout);
-			if ( (current->stop_id == root->stop_id) && (current->predecessor_arc != nullptr) && (current->predecessor_arc->arc_t == ArcGraph::STOP) ) {
+			if ( (current->node_id == root->node_id) && (current->predecessor_arc != nullptr) && (current->predecessor_arc->arc_t == ArcGraph::STOP) ) {
 				bool allOK = true;
 
 				for (auto n : arcMapList) {
@@ -365,22 +361,22 @@ void FlowGraph::getMinimumPathAll(std::map<unsigned int, std::list<ArcGraph *> >
 			}
 		}
 
-		/*cout << "end making the results" << endl; fflush(stdout);
-
-		// print example
-		for (auto n : arcMapList) {
-			cout << "BFS for node " << n.first << " = ";
-			for (auto a : n.second) {
-				cout << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << " | ";
-			}
-			cout << endl;
-		}
-
-		cout << "END1 getMinimumPathAll" << endl; fflush(stdout);*/
+//		cout << "end making the results" << endl; fflush(stdout);
+//
+//		// print example
+//		for (auto n : arcMapList) {
+//			cout << "BFS for node " << n.first << " = ";
+//			for (auto a : n.second) {
+//				cout << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << " | ";
+//			}
+//			cout << endl;
+//		}
+//
+//		cout << "END1 getMinimumPathAll" << endl; fflush(stdout);
 
 		//exit(EXIT_SUCCESS);
 	}
-
+	*/
 	//cout << "END2 getMinimumPathAll" << endl; fflush(stdout);
 }
 
@@ -388,13 +384,15 @@ void FlowGraph::getMinimumPathToFew(std::map<unsigned int, std::list<ArcGraph *>
 	std::list<NodeGraph *> q;
 	std::map<unsigned int, NodeGraph *> minimumTimeMap;
 
-	/*cout << endl << "getMinimumPathToFew - START" << endl; fflush(stdout);
-	cout << "getMinimumPathToFew - Looking for path from stop: " << stopStart << "_" << timeStart << endl;
-	cout << "getMinimumPathToFew - To the end nodes: ";
-	for (auto& nn : stopsEnd) {
-		cout << nn->getStopIdNum() << " ";
-	}
-	cout << endl;*/
+	//TODO TODO
+/*
+	//cout << endl << "getMinimumPathToFew - START" << endl; fflush(stdout);
+	//cout << "getMinimumPathToFew - Looking for path from stop: " << stopStart << "_" << timeStart << endl;
+	//cout << "getMinimumPathToFew - To the end nodes: ";
+	//for (auto& nn : stopsEnd) {
+	//	cout << nn->getStopIdNum() << " ";
+	//}
+	//cout << endl;
 
 	//reset
 	for (auto& l : arcMapList) {
@@ -417,14 +415,14 @@ void FlowGraph::getMinimumPathToFew(std::map<unsigned int, std::list<ArcGraph *>
 		NodeGraph *root = graphMapMap[stopStart][timeStart];
 
 		// init the full graph
-		/*for (auto n : graphMapMap) {
-			for (auto g : n.second) {
-				NodeGraph *act = g.second;
-				act->bfs_state = NodeGraph::NOT_VISITED;
-				act->distenace_from_root = std::numeric_limits<int>::max();
-				act->predecessor_arc = nullptr;
-			}
-		}*/
+		//for (auto n : graphMapMap) {
+		//	for (auto g : n.second) {
+		//		NodeGraph *act = g.second;
+		//		act->bfs_state = NodeGraph::NOT_VISITED;
+		//		act->distenace_from_root = std::numeric_limits<int>::max();
+		//		act->predecessor_arc = nullptr;
+		//	}
+		//}
 
 		q.push_back(root);		// Q := queue initialized with {root}
 		minimumTimeMap[stopStart] = root;
@@ -474,29 +472,29 @@ void FlowGraph::getMinimumPathToFew(std::map<unsigned int, std::list<ArcGraph *>
 					NodeGraph *adj = a->dest;
 
 					if (adj->bfs_state == NodeGraph::NOT_VISITED) { // if n is not labeled as discovered:
-						/*bool onlySTOP = true;
-						NodeGraph *true_adj = adj;
-						ArcGraph *actPredArc = a;
-						while (onlySTOP) {
-							NodeGraph *nextIfStop;
-							for (auto& at : true_adj->arcs) {
-								if (at->arc_t == ArcGraph::BUS) {
-									onlySTOP = false;
-									break;
-								}
-								else if (at->arc_t == ArcGraph::STOP) {
-									nextIfStop = at->dest;
-									actPredArc = at;
-								}
-							}
-							if (onlySTOP) {
-								true_adj->bfs_state = NodeGraph::VISITED;	// label n as discovered
-								true_adj->predecessor_arc = a;				// n.parent = current
-								true_adj->distenace_from_root = current->distenace_from_root + (a->dest->time - a->src->time);
-
-								true_adj = nextIfStop;
-							}
-						}*/
+//						bool onlySTOP = true;
+//						NodeGraph *true_adj = adj;
+//						ArcGraph *actPredArc = a;
+//						while (onlySTOP) {
+//							NodeGraph *nextIfStop;
+//							for (auto& at : true_adj->arcs) {
+//								if (at->arc_t == ArcGraph::BUS) {
+//									onlySTOP = false;
+//									break;
+//								}
+//								else if (at->arc_t == ArcGraph::STOP) {
+//									nextIfStop = at->dest;
+//									actPredArc = at;
+//								}
+//							}
+//							if (onlySTOP) {
+//								true_adj->bfs_state = NodeGraph::VISITED;	// label n as discovered
+//								true_adj->predecessor_arc = a;				// n.parent = current
+//								true_adj->distenace_from_root = current->distenace_from_root + (a->dest->time - a->src->time);
+//
+//								true_adj = nextIfStop;
+//							}
+//						}
 
 
 						adj->bfs_state = NodeGraph::DISCOVERED;	// label n as discovered
@@ -548,31 +546,32 @@ void FlowGraph::getMinimumPathToFew(std::map<unsigned int, std::list<ArcGraph *>
 			un->distenace_from_root = std::numeric_limits<int>::max();
 			un->predecessor_arc = nullptr;
 		}
-
-		/*cout << "getMinimumPathToFew - Minimum paths:" << endl;
-		for (auto& n : arcMapList) {
-			cout << "getMinimumPathToFew - BFS for node " << n.first << " = ";
-			for (auto a : n.second) {
-				cout << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << " | ";
-			}
-			cout << endl;
-		}*/
-
-		/*cout << "end making the results" << endl; fflush(stdout);
-
-			// print example
-			for (auto n : arcMapList) {
-				cout << "BFS for node " << n.first << " = ";
-				for (auto a : n.second) {
-					cout << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << " | ";
-				}
-				cout << endl;
-			}
-
-			cout << "END1 getMinimumPathAll" << endl; fflush(stdout);*/
+//
+//		cout << "getMinimumPathToFew - Minimum paths:" << endl;
+//		for (auto& n : arcMapList) {
+//			cout << "getMinimumPathToFew - BFS for node " << n.first << " = ";
+//			for (auto a : n.second) {
+//				cout << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << " | ";
+//			}
+//			cout << endl;
+//		}
+//
+//		cout << "end making the results" << endl; fflush(stdout);
+//
+//			// print example
+//			for (auto n : arcMapList) {
+//				cout << "BFS for node " << n.first << " = ";
+//				for (auto a : n.second) {
+//					cout << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << " | ";
+//				}
+//				cout << endl;
+//			}
+//
+//			cout << "END1 getMinimumPathAll" << endl; fflush(stdout);
 
 		//exit(EXIT_SUCCESS);
 	}
+	*/
 
 	//cout << "END2 getMinimumPathAll" << endl; fflush(stdout);
 }
@@ -590,6 +589,8 @@ void FlowGraph::getMinimumPathFromAll(std::list<ArcGraph *> &arcList, unsigned i
 }
 
 void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
+	//TODO TODO
+	/*
 	for (auto& u : uavList){
 		if (u->getState() == Uav::UAV_FLYING) {
 			NodeGraph *ng = graphMapMap[u->getPositionStopId()][time];
@@ -640,6 +641,7 @@ void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
 			// DO NOTHING
 		}
 	}
+	*/
 }
 
 void FlowGraph::execute(struct std::tm time, std::list<Uav *> &uavList){
@@ -665,7 +667,8 @@ bool FlowGraph::exportDotResult(std::string dotFileName) {
 	int sOffest = 3;
 	int sSize = 2;
 
-	if (fout.is_open()) {
+	//TODO TODO
+	/*if (fout.is_open()) {
 		fout << "digraph G{" << endl;
 
 		//for (auto sMap : graphMapMap){
@@ -742,7 +745,7 @@ bool FlowGraph::exportDotResult(std::string dotFileName) {
 		fout.close();
 
 		return true;
-	}
+	}*/
 	return false;
 }
 

@@ -12,6 +12,14 @@
 
 #include "BusRoute.h"
 
+#include "Home.h"
+#include "Battery.h"
+//#include "FlowGraph.h"
+
+
+class Simulator;
+class NodeGraph;
+
 class Uav {
 	static int idCounter;
 
@@ -22,38 +30,63 @@ public:
 	} UAV_STATE;
 
 public:
-	Uav();
+	Uav(Simulator *sim);
 	virtual ~Uav();
 
 	double addEnergy(double difference);
 
-	bool isCovering(void) {return (covering_poi_id != std::numeric_limits<unsigned long int>::max());};
-	void unsetCovering(void) {covering_poi_id = std::numeric_limits<unsigned long int>::max();};
-
-	unsigned long int getCoveringPoiId() const {		return covering_poi_id;	}
-	void setCoveringPoiId(unsigned long int coveringPoiId) {		covering_poi_id = coveringPoiId;	}
-	unsigned long int getPositionStopId() const {		return position_stop_id;	}
-	void setPositionStopId(unsigned long int positionStopId) {		position_stop_id = positionStopId;	}
+	unsigned long int getPositionId() const {		return position_id;	}
+	void setPositionId(unsigned long int positionId) {		position_id = positionId;	}
 	double getResudualEnergy() const {		return resudualEnergy;	}
 	void setResudualEnergy(double resudualEnergy) {		this->resudualEnergy = resudualEnergy;	}
 	UAV_STATE getState() const {	return state;	}
 	void setState(UAV_STATE state) {		this->state = state;	}
+	double getAverageSpeed() const {		return averageSpeed;	}
+	void setAverageSpeed(double averageSpeed) {		this->averageSpeed = averageSpeed;	}
 	int getId() const {		return id;	}
+	Battery* getBatt() {		return batt;	}
+	Home* getBelongingHome()  {		return belongingHome;	}
+	void setBelongingHome(Home* belongingHome) {		this->belongingHome = belongingHome;	}
+	void setBatt(Battery* batt) {		this->batt = batt;	}
+	double getPosLon() const {		return pos_lon;	}
+	void setPosLon(double posLon) {		pos_lon = posLon;	}
+	double getPosLat() const {		return pos_lat;	}
+	void setPosLat(double posLat) {		pos_lat = posLat;	}
 
-	unsigned int getTimeInPoiRec() const {		return timeInPoiRec;	}
-	void addTimeInPoiRec(unsigned int timeInPoiRec_val) {		this->timeInPoiRec += timeInPoiRec_val;	}
-	unsigned int getTimeInPoiRecRel() const {		return timeInPoiRecRel;	}
-	void addTimeInPoiRecRel(unsigned int timeInPoiRecRel_val) {		this->timeInPoiRecRel += timeInPoiRecRel_val;	}
-	unsigned int getTimeInPoiRel() const {		return timeInPoiRel;	}
-	void addTimeInPoiRel(unsigned int timeInPoiRel_val) {		this->timeInPoiRel += timeInPoiRel_val;	}
 	unsigned int getTimeInStop() const {		return timeInStop;	}
 	void addTimeInStop(unsigned int timeInStop_val) {		this->timeInStop += timeInStop_val;	}
 	unsigned int getTimeOnBus() const {		return timeOnBus;	}
 	void addTimeOnBus(unsigned int timeOnBus_val) {		this->timeOnBus += timeOnBus_val;	}
 
 public:
+	// This function converts decimal degrees to radians
+	static double deg2rad(double deg) { return (deg * M_PI / 180.0); }
+
+	//  This function converts radians to decimal degrees
+	static double rad2deg(double rad) { return (rad * 180.0 / M_PI); }
+
+	/**
+	 * Returns the distance between two points on the Earth.
+	 * Direct translation from http://en.wikipedia.org/wiki/Haversine_formula
+	 * @param lat1d Latitude of the first point in degrees
+	 * @param lon1d Longitude of the first point in degrees
+	 * @param lat2d Latitude of the second point in degrees
+	 * @param lon2d Longitude of the second point in degrees
+	 * @return The distance between the two points in kilometers
+	 */
+	static double distanceEarth(double lat1d, double lon1d, double lat2d, double lon2d) {
+		double lat1r, lon1r, lat2r, lon2r, u, v;
+		lat1r = deg2rad(lat1d);
+		lon1r = deg2rad(lon1d);
+		lat2r = deg2rad(lat2d);
+		lon2r = deg2rad(lon2d);
+		u = sin((lat2r - lat1r)/2);
+		v = sin((lon2r - lon1r)/2);
+		return 2.0 * 6371.0 * asin(sqrt(u * u + cos(lat1r) * cos(lat2r) * v * v)) * 1000.0;
+	}
+
 	static int getFlyTime_sec(double s_lat, double s_lon, double a_lat, double a_lon, double baseSpeed, double w) {
-		double dist = Simulator::distanceEarth(s_lat, s_lon, a_lat, a_lon);
+		double dist = distanceEarth(s_lat, s_lon, a_lat, a_lon);
 		double speedUAV;
 
 		if (w <= 0) {
@@ -75,18 +108,24 @@ public:
 
 private:
 	double resudualEnergy;
-	unsigned long int covering_poi_id;
-	unsigned long int position_stop_id;
+	//unsigned long int position_stop_id;
+	unsigned long int position_id;
+	//NodeGraph::NODE_TYPE position_type;
+	NodeGraph *position_node;
 	int id;
+	double averageSpeed;
 
 	unsigned int timeInStop;
 	unsigned int timeOnBus;
-	unsigned int timeInPoiRec;
-	unsigned int timeInPoiRel;
-	unsigned int timeInPoiRecRel;
+
+	double pos_lon;
+	double pos_lat;
 
 
 	UAV_STATE state;
+	Simulator *simulator;
+	Battery *batt;
+	Home *belongingHome;
 };
 
 

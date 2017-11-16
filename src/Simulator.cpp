@@ -5,6 +5,7 @@
  *      Author: angelo
  */
 
+#include <stdio.h>
 #include "Simulator.h"
 
 using namespace std;
@@ -21,9 +22,12 @@ Simulator::Simulator() {
 	eRECORDINGRELAY = -170;
 	eRECHARGING = 25;
 
+	uavAvgSpeed = 20;
+
 	maxDistancePoiStop = 200;
 
 	initialUavEnergy = 130000; //Joule
+	maxUavEnergy = 130000;
 
 	stopsMinLat = 44.484336; //std::numeric_limits<double>::min();
 	stopsMaxLat = 44.506704; //std::numeric_limits<double>::max();
@@ -97,7 +101,7 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 
 	// ALGORITHM TYPE
 	const std::string &algoTypeString = inputVal->getCmdOption("-a");
-	if (!algoTypeString.empty()) {
+	/*if (!algoTypeString.empty()) {
 		if (algoTypeString.compare("TSP") == 0) {
 			cout << "Setting algo TSP" << endl;
 			flowGraph = new TspGraph(this);
@@ -118,7 +122,9 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 	else {
 		cout << "Setting algo default NOREC" << endl;
 		flowGraph = new FlowGraph(this);
-	}
+	}*/
+	cout << "Setting algo default NOREC" << endl;
+	flowGraph = new FlowGraph(this);
 
 	// START SIMULATION TIME
 	const std::string &sSimString = inputVal->getCmdOption("-sSIM");
@@ -181,6 +187,12 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 	}
 	else {
 		uavAvgSpeed = 20;
+	}
+
+	// MAX BATTERY ENERGY
+	const std::string &maxBattString = inputVal->getCmdOption("-maxB");
+	if (!maxBattString.empty()) {
+		maxUavEnergy = atof(maxBattString.c_str());
 	}
 
 	// ENERGY IF UAV IS IN STOP-ARC
@@ -472,106 +484,6 @@ bool Simulator::importStopTimes(std::string stopsFileName) {
 	return true;
 }
 
-bool Simulator::importPoi(std::string poiFileName) {
-	if (!setRandomPoint) {
-		int rowCount;
-		std::string str;
-
-		cout << "START PARSING POI" << endl;
-
-		std::ifstream filePoi(poiFileName, std::ifstream::in);
-		if(!filePoi.is_open()) return false;
-
-		std::getline(filePoi, str); // read first line
-		rowCount = 1;
-		while (std::getline(filePoi, str)) {
-			Poi newPoi;
-
-			str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
-			str.erase(std::remove(str.begin(), str.end(), '\r'), str.end());
-
-			if(newPoi.parseInput(str)){
-				//if (	(newPoi.getPoiLatNum() >= stopsMinLat) &&
-				//		(newPoi.getPoiLatNum() <= stopsMaxLat) &&
-				//		(newPoi.getPoiLonNum() >= stopsMinLon) &&
-				//		(newPoi.getPoiLonNum() <= stopsMaxLon)	){
-				if (isInsideBoudaries(newPoi.getPoiLatNum(), newPoi.getPoiLonNum())) {
-					poiMap[newPoi.getPoiIdNum()] = newPoi;
-					cout << "Adding Poi -> " << str << endl;
-				}
-				else {
-					cout << "POI " << newPoi.getPoiId() << " is outside the map" << endl;
-				}
-			}
-			else {
-				cerr << "Error parsing Poi -> " << str << endl;
-				return EXIT_FAILURE;
-			}
-			rowCount++;
-			fprintf(stdout, "\rPoi parsing: %.03f%%", ((((double) rowCount) / POI_FILE_SIZE) * 100.0));
-		}
-		cout << "  -  Parsed " << poiMap.size() << " poi out of " << (POI_FILE_SIZE - 1) << endl;
-		filePoi.close();
-
-		return true;
-	}
-	else {
-		std::vector<Boundary *> boundaryVec;
-		int noIdx = 0;
-		for (auto& b : boundaryList) {
-			if (noIdx == 1) continue;
-			boundaryVec.push_back(&b);
-			noIdx++;
-		}
-
-		cout << "Generating " << numberOfRandomPoint << " random POI" << endl;
-
-		for (int i = 0; i < numberOfRandomPoint; i++) {
-			Poi newPoi;
-			int vecIdx = std::rand() % boundaryVec.size();
-
-			bool toFIND = true;
-			double poi_lat;
-			double poi_lon;
-
-			while (toFIND) {
-				double f;
-
-				f = ((double)rand()) / RAND_MAX;
-				poi_lat = boundaryVec[vecIdx]->minLAT + f * (boundaryVec[vecIdx]->maxLAT - boundaryVec[vecIdx]->minLAT);
-
-				f = ((double)rand()) / RAND_MAX;
-				poi_lon = boundaryVec[vecIdx]->minLON + f * (boundaryVec[vecIdx]->maxLON - boundaryVec[vecIdx]->minLON);
-
-
-				cout << "Random from " << boundaryVec[vecIdx]->minLAT << " to " << boundaryVec[vecIdx]->maxLAT  << " get " << poi_lat << " latitude" << endl;
-				cout << "Random from " << boundaryVec[vecIdx]->minLON << " to " << boundaryVec[vecIdx]->maxLON  << " get " << poi_lon << " latitude" << endl;
-
-				//poi_lat = Poi::fRand(boundaryVec[vecIdx]->minLAT, boundaryVec[vecIdx]->maxLAT);
-				//poi_lon = Poi::fRand(boundaryVec[vecIdx]->minLON, boundaryVec[vecIdx]->maxLON);
-
-				unsigned int cStops = countNeighStopLanLon(poi_lat, poi_lon);
-
-				cout << "Poi at " << poi_lat << ";" << poi_lon << " has " << cStops << " stops" << endl;
-
-				if (cStops > 2) {
-					toFIND = false;
-				}
-			}
-
-
-			newPoi.createRandom(i, poi_lat, poi_lon);
-
-			poiMap[newPoi.getPoiIdNum()] = newPoi;
-		}
-
-		cout << "Created " << poiMap.size() << " poi" << endl;
-
-		return true;
-	}
-}
-
-
 bool Simulator::importHomes(std::string homesFileName) {
 	int rowCount;
 	std::string str;
@@ -745,26 +657,6 @@ bool Simulator::exportStopTimes(std::string stopTimesFileName) {
 	return true;
 }
 
-bool Simulator::exportPoi(std::string poiFileName) {
-	std::ofstream poiStream(poiFileName, std::ofstream::out);
-
-	if (!poiStream.is_open()) return false;
-
-	poiStream << "poi_id,poi_name,poi_lat,poi_lon,poi_type" << endl;
-
-	for (auto& ss : poiMap) {
-		poiStream << "\"" << ss.second.getPoiId() << "\","
-				<< "\"" << ss.second.getPoiName() << "\","
-				<< "\"" << ss.second.getPoiLat() << "\","
-				<< "\"" << ss.second.getPoiLon() << "\","
-				<< "\"" << ss.second.getPoiType() << "\""
-				<< endl;
-	}
-
-	poiStream.close();
-
-	return true;
-}
 
 bool Simulator::exportHomes(std::string homesFileName) {
 	std::ofstream homesStream(homesFileName, std::ofstream::out);
@@ -938,36 +830,7 @@ bool Simulator::generateBusRoute(void) {
 	return ris;
 }
 
-void Simulator::getNeighPoi(unsigned int stopID, std::vector<Poi *> &neighPoi) {
-	neighPoi.clear();
-	if (stopsMap.count(stopID) > 0) {
-		Stops *ss = &stopsMap[stopID];
-		for (auto& p : poiMap) {
-			Poi *ppt = &(p.second);
-			if (distanceEarth(ppt->getPoiLatNum(), ppt->getPoiLatNum(), ss->getStopLatNum(), ss->getStopLonNum()) <= maxDistancePoiStop) {
-				neighPoi.push_back(ppt);
-			}
-		}
-	}
-}
-
-void Simulator::getNeighStop(unsigned int poiID, std::vector<Stops *> &neighStops) {
-	neighStops.clear();
-	if (poiMap.count(poiID) > 0) {
-		Poi *ppt = &poiMap[poiID];
-		for (auto& s : stopsMap) {
-			Stops *ss = &(s.second);
-			double dist = distanceEarth(ppt->getPoiLatNum(), ppt->getPoiLonNum(), ss->getStopLatNum(), ss->getStopLonNum());
-			//cout << "Distance from "
-			//		<< "POI: " << ppt->getPoiIdNum() << "[" << ppt->getPoiLatNum() << "," << ppt->getPoiLonNum() << "]"
-			//		<< " and Stop: " << ss->getStopIdNum()  << "[" << ss->getStopLatNum() << "," << ss->getStopLonNum() << "]"
-			//		<< " is: " << dist << endl;
-			if (dist <= maxDistancePoiStop) {
-				neighStops.push_back(ss);
-			}
-		}
-	}
-}
+/*
 
 unsigned int Simulator::countNeighStopLanLon(double lan, double lon) {
 	unsigned int ris = 0;
@@ -982,10 +845,9 @@ unsigned int Simulator::countNeighStopLanLon(double lan, double lon) {
 	}
 
 	return ris;
-}
+}*/
 
 void Simulator::updateBatteries(Uav *u) {
-	Poi::POI_TYPE_T pt;
 	Uav::UAV_STATE us;
 
 	us = u->getState();
@@ -996,6 +858,13 @@ void Simulator::updateBatteries(Uav *u) {
 			u->addTimeOnBus(1);
 			break;
 
+		case Uav::UAV_FLYING:
+		default:
+			u->addEnergy(eSTOP);
+			u->addTimeInStop(1);
+
+			break;
+		/*
 		case Uav::UAV_FLYING:
 		default:
 			if (u->isCovering()) {
@@ -1021,6 +890,7 @@ void Simulator::updateBatteries(Uav *u) {
 			}
 
 			break;
+		*/
 	}
 }
 
@@ -1084,13 +954,12 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 
 		for (auto& st : stopsMap) {
 			flowGraph->addFollowingStop(st.second.getStopIdNum(), act_time);
-			flowGraph->generateStaticArcs(st.second.getStopIdNum(), before_time, act_time, ArcGraph::STOP);
 			flowGraph->generateStaticArcsStop(st.second.getStopIdNum(), before_time, act_time, ArcGraph::STOP);
 		}
 		for (auto& hh : homesMap) {
 			flowGraph->addFollowingHome(hh.second.getHomeIdNum(), act_time);
 			flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::STOP);
-			for (int ii = 0; ii < hh.second.home_charg_num; ++ii) {
+			for (int ii = 0; ii < hh.second.getHomeChargNum(); ++ii) {
 				flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::RECHARGE_HOME);
 			}
 		}
@@ -1213,12 +1082,37 @@ bool Simulator::init(void) {
 	// init the UAVs
 	cout << "INIT THE " << nUAV << " UAVs" << endl; fflush(stdout);
 	for (unsigned int i = 0; i < nUAV; i++) {
-		Uav *newUav = new Uav();
+		//Uav *newUav = new Uav();
 
-		newUav->setResudualEnergy(initialUavEnergy);
+		//newUav->setResudualEnergy(initialUavEnergy);
+		//listUav.push_back(newUav);
+		Uav *newUav = new Uav(this);
+
+		Battery *bat = new Battery();
+		bat->setMaxEnergy(maxUavEnergy);
+		bat->setResudualEnergy(initialUavEnergy);
+		bat->setState(Battery::BATTERY_SELFDISCHARGING);
+
+		newUav->setAverageSpeed(uavAvgSpeed);
+		newUav->setBatt(bat);
+
+		if (homesMap.size() > 0) {
+			auto hIT = homesMap.begin();
+			int idxRand = rand() % homesMap.size();
+
+			while (idxRand > 0) {
+				hIT++;
+				--idxRand;
+			}
+			newUav->setPosLon(hIT->second.getHomeLonNum());
+			newUav->setPosLat(hIT->second.getHomeLatNum());
+			newUav->setBelongingHome((Home *) (&(hIT->second)));
+		}
+
 		listUav.push_back(newUav);
 	}
 
+	/*
 	if (nUAV < poiMap.size()) {
 		cerr << "Number of UAV: " << nUAV << ", number of POIs: " << poiMap.size() << endl;
 		ris = false;
@@ -1264,30 +1158,31 @@ bool Simulator::init(void) {
 			}
 			flowGraph->setInitExtraUAV(remainingUAV, start_sim_time_tm, stopsMap);
 
-			/*std::vector<Stops *> lStops;
-			for (auto& ss : stopsMap) {
-				lStops.push_back(&(ss.second));
-			}
-			std::random_shuffle ( lStops.begin(), lStops.end() );
-
-			//setto gli altri in modo randomico
-			while (itUAV != listUav.end()) {
-				uav = *itUAV;
-
-				uav->setState(Uav::UAV_FLYING);
-				uav->unsetCovering();
-				uav->setPositionStopId(lStops[(std::rand() % lStops.size())]->getStopIdNum());
-
-				flowGraph->setUavPosition(start_sim_time_tm, uav);
-
-				cout << "UAV " << uav->getId() << " set on stop: " << uav->getPositionStopId() << endl;
-
-				itUAV++;
-			}*/
+//			std::vector<Stops *> lStops;
+//			for (auto& ss : stopsMap) {
+//				lStops.push_back(&(ss.second));
+//			}
+//			std::random_shuffle ( lStops.begin(), lStops.end() );
+//
+//			//setto gli altri in modo randomico
+//			while (itUAV != listUav.end()) {
+//				uav = *itUAV;
+//
+//				uav->setState(Uav::UAV_FLYING);
+//				uav->unsetCovering();
+//				uav->setPositionStopId(lStops[(std::rand() % lStops.size())]->getStopIdNum());
+//
+//				flowGraph->setUavPosition(start_sim_time_tm, uav);
+//
+//				cout << "UAV " << uav->getId() << " set on stop: " << uav->getPositionStopId() << endl;
+//
+//				itUAV++;
+//			}
 		}
 
 		// Put the UAVs on the Flow Graph
 	}
+	*/
 	cout << "END SETTING THE UAVs" << endl; fflush(stdout);
 
 	return ris;
@@ -1352,52 +1247,36 @@ void Simulator::stats(std::string outFileName) {
 	if (fOutOK) statStream << "TOTAL_SWAP_COUNT_PERUAV " << ((double)flowGraph->getSwapCount()) / ((double) listUav.size()) << endl;
 	if (fOutOK) statStream << "TOTAL_SWAP_COUNT_PERUAV_AVGINTIME " << (((double)flowGraph->getSwapCount()) / ((double) listUav.size())) / ((double) finalLifetime) << endl;
 
-	double sumStop, sumBus, sumPoiRel, sumPoiRec, sumPoiRelRec, sumALL;
-	sumStop = sumBus = sumPoiRel = sumPoiRec = sumPoiRelRec = 0;
+	double sumStop, sumBus, sumALL;
+	sumStop = sumBus = 0;
 
 	for (auto& uav : listUav) {
 		sumStop += uav->getTimeInStop();
 		sumBus += uav->getTimeOnBus();
-		sumPoiRel += uav->getTimeInPoiRel();
-		sumPoiRec += uav->getTimeInPoiRec();
-		sumPoiRelRec += uav->getTimeInPoiRecRel();
 	}
-	sumALL = sumStop + sumBus + sumPoiRel + sumPoiRec + sumPoiRelRec;
+	sumALL = sumStop + sumBus;
 
 	cout << "UAVs LIFESTYLE: "
 			<< "Stop " << (sumStop / sumALL) * 100.0 << "%; "
 			<< "Bus " << (sumBus / sumALL) * 100.0 << "%; "
-			<< "PoiRelay " << (sumPoiRel / sumALL) * 100.0 << "%; "
-			<< "PoiRecord " << (sumPoiRec / sumALL) * 100.0 << "%; "
-			<< "PoiRecordRelay " << (sumPoiRelRec / sumALL) * 100.0 << "%"
 			<< endl;
 
 	if (fOutOK) statStream << "UAV_LIFESTYLE "
 			<< "Stop " << (sumStop / sumALL) * 100.0 << " "
 			<< "Bus " << (sumBus / sumALL) * 100.0 << " "
-			<< "PoiRelay " << (sumPoiRel / sumALL) * 100.0 << " "
-			<< "PoiRecord " << (sumPoiRec / sumALL) * 100.0 << " "
-			<< "PoiRecordRelay " << (sumPoiRelRec / sumALL) * 100.0
 			<< endl;
 
 	for (auto& uav : listUav) {
-		double sumUavAll = uav->getTimeInStop() + uav->getTimeOnBus() +
-				uav->getTimeInPoiRel() + uav->getTimeInPoiRec() + uav->getTimeInPoiRecRel();
+		double sumUavAll = uav->getTimeInStop() + uav->getTimeOnBus();
 
 		cout << "   UAV " << uav->getId() << " LIFESTYLE: "
 				<< "Stop " << ( ((double) uav->getTimeInStop()) / sumUavAll) * 100.0 << "%; "
 				<< "Bus " << (((double) uav->getTimeOnBus()) / sumUavAll) * 100.0 << "%; "
-				<< "PoiRelay " << (((double) uav->getTimeInPoiRel()) / sumUavAll) * 100.0 << "%; "
-				<< "PoiRecord " << (((double) uav->getTimeInPoiRec()) / sumUavAll) * 100.0 << "%; "
-				<< "PoiRecordRelay " << (((double) uav->getTimeInPoiRecRel()) / sumUavAll) * 100.0 << "%"
 				<< endl;
 
 		if (fOutOK) statStream << "UAV_N" << uav->getId() << "_LIFESTYLE: "
 						<< "Stop " << ( ((double) uav->getTimeInStop()) / sumUavAll) * 100.0 << " "
 						<< "Bus " << (((double) uav->getTimeOnBus()) / sumUavAll) * 100.0 << " "
-						<< "PoiRelay " << (((double) uav->getTimeInPoiRel()) / sumUavAll) * 100.0 << " "
-						<< "PoiRecord " << (((double) uav->getTimeInPoiRec()) / sumUavAll) * 100.0 << " "
-						<< "PoiRecordRelay " << (((double) uav->getTimeInPoiRecRel()) / sumUavAll) * 100.0
 						<< endl;
 	}
 

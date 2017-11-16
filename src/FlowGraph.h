@@ -20,7 +20,6 @@
 #include <map>
 
 #include "BusRoute.h"
-#include "Poi.h"
 #include "Stops.h"
 #include "Uav.h"
 //#include "Simulator.h"
@@ -114,7 +113,6 @@ public:
 	FlowGraph(Simulator *s);
 	virtual ~FlowGraph();
 
-	virtual void initPoi(std::map<unsigned long int, Poi> &poiMap, std::string tpsFileName) {};
 	void execute(struct std::tm time, std::list<Uav *> &uavList);
 
 	void addInitStop(unsigned int stop, struct std::tm time);
@@ -123,7 +121,6 @@ public:
 	void addFollowingStop(unsigned int stop, struct std::tm time);
 	void addFollowingHome(unsigned int home, struct std::tm time);
 	void addFollowingDeliveryPoint(unsigned int dp, struct std::tm time);
-	void generateStaticArcs(unsigned int stop, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE, Poi *p = nullptr);
 	void generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
 	void generateStaticArcsHome(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
 	void generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd);

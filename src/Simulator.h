@@ -23,13 +23,12 @@
 #include "Trips.h"
 #include "CalendarDate.h"
 #include "StopTimes.h"
-#include "Poi.h"
 #include "Uav.h"
 #include "BusRoute.h"
 #include "FlowGraph.h"
-#include "TspGraph.h"
-#include "BestPoiGraph.h"
-#include "WorstUav.h"
+//#include "TspGraph.h"
+//#include "BestPoiGraph.h"
+//#include "WorstUav.h"
 
 #include "BatteriesManager.h"
 #include "Home.h"
@@ -110,7 +109,6 @@ public:
 	bool importTrips(std::string stopsFileName);
 	bool importCalendarDates(std::string stopsFileName);
 	bool importStopTimes(std::string stopsFileName);
-	bool importPoi(std::string poiFileName);
 	bool importHomes(std::string homesFileName);
 	bool importDeliveryPoints(std::string deliverypointsFileName);
 
@@ -118,17 +116,12 @@ public:
 	bool exportTrips(std::string tripsFileName);
 	bool exportCalendarDates(std::string calendarDAtesFileName);
 	bool exportStopTimes(std::string stopTimesFileName);
-	bool exportPoi(std::string poiFileName);
 	bool exportHomes(std::string homesFileName);
 	bool exportDeliveryPoints(std::string deliverypointsFileName);
 
 	bool exportDotResult(std::string dotFileName);
 
 	bool generateBusRoute(void);
-
-	void getNeighPoi(unsigned int stopID, std::vector<Poi *> &neighPoi);
-	void getNeighStop(unsigned int poiID, std::vector<Stops *> &neighStops);
-	unsigned int countNeighStopLanLon(double lan, double lon);
 
 	void importSomeParameterFromInputLine(InputParser *inputVal);
 
@@ -150,7 +143,6 @@ public:
 	unsigned int getTimeslot() const {		return timeslot;	}
 	void setTimeslot(unsigned int timeslot) {		this->timeslot = timeslot;	}
 	bool isToCluster() const {		return toCluster;	}
-	unsigned int getNPoi() {		return poiMap.size();	}
 
 public:
 	// This function converts decimal degrees to radians
@@ -201,6 +193,7 @@ private:
 	unsigned int nUAV;
 
 	double initialUavEnergy; //Joule
+	double maxUavEnergy; 	// Joule
 	double uavAvgSpeed;		 	// m/s
 
 	double maxDistancePoiStop; // meters

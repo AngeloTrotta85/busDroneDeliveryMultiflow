@@ -9,13 +9,21 @@
 
 int Uav::idCounter = 0;
 
-Uav::Uav() {
+Uav::Uav(Simulator *sim) {
+	simulator = sim;
 	state = UAV_FLYING;
 
 	resudualEnergy = 0;
-	covering_poi_id = position_stop_id = std::numeric_limits<unsigned long int>::max();
+	position_id = std::numeric_limits<unsigned long int>::max();
 
-	timeInStop = timeOnBus = timeInPoiRec = timeInPoiRel = timeInPoiRecRel = 0;
+	timeInStop = timeOnBus = 0;
+
+	belongingHome = nullptr;
+	batt = nullptr;
+	averageSpeed = 10;
+
+	pos_lon = 0;
+	pos_lat = 0;
 
 	id = idCounter++;
 }
