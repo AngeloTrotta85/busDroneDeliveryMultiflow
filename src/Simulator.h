@@ -236,7 +236,7 @@ private:
 	std::map<std::string, CalendarDate> calendarDateMap;
 	std::map<std::string, StopTimes> stopTimesMap;
 	std::map<std::string, std::map<unsigned long int, StopTimes> > stopTimesMapMap;
-	std::map<unsigned long int, Poi> poiMap;
+	//std::map<unsigned long int, Poi> poiMap;
 	std::map<std::string, BusRoute> busRouteMap;
 
 public:
