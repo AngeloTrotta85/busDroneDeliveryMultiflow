@@ -120,14 +120,13 @@ public:
 	bool exportDeliveryPoints(std::string deliverypointsFileName);
 
 	bool exportDotResult(std::string dotFileName);
+	bool exportDotFullEmptyGraph(std::string dotFileName);
 
 	bool generateBusRoute(void);
 
 	void importSomeParameterFromInputLine(InputParser *inputVal);
 
 	unsigned int getTime() const { return time; }
-	unsigned int getMaxTime() const { return maxTime; }
-	void setMaxTime(unsigned int maxTime) { this->maxTime = maxTime; }
 	double getStopsMaxLat() const {		return stopsMaxLat;	}
 	void setStopsMaxLat(double stopsMaxLat) {		this->stopsMaxLat = stopsMaxLat;	}
 	double getStopsMaxLon() const {		return stopsMaxLon;	}
@@ -188,7 +187,6 @@ private:
 private:
 	unsigned int time;
 	unsigned int timeslot;	//seconds
-	unsigned int maxTime;
 
 	unsigned int nUAV;
 

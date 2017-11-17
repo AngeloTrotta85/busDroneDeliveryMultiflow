@@ -154,10 +154,10 @@ void FlowGraph::generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBeg
 					ArcGraph *newArcStop = new ArcGraph();
 
 					newArcStop->arc_t = ArcGraph::BUS;
-					newArcStop->src = graphMapMap[nodeStart][timeStart];
-					newArcStop->dest = graphMapMap[nodeDest][timeDest];
+					newArcStop->src = graphMapMapMap[NodeGraph::STOP][nodeStart][timeStart];
+					newArcStop->dest = graphMapMapMap[NodeGraph::STOP][nodeDest][timeDest];
 
-					graphMapMap[nodeStart][timeStart]->arcs.push_back(newArcStop);
+					graphMapMapMap[NodeGraph::STOP][nodeStart][timeStart]->arcs.push_back(newArcStop);
 				}
 			}
 
@@ -181,8 +181,23 @@ void FlowGraph::generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_ty
 	}
 }
 
-void FlowGraph::setUavPosition(struct std::tm time, Uav *uav) {
+NodeGraph *FlowGraph::getNodePtr(NodeGraph::NODE_TYPE n_type, unsigned int id, struct std::tm time_tm) {
+	NodeGraph *ris = nullptr;
+
+	if ((graphMapMapMap.count(n_type) > 0) && (graphMapMapMap[n_type].count(id) > 0) && (graphMapMapMap[n_type][id].count(day_tm2seconds(time_tm)) > 0)) {
+		ris = graphMapMapMap[n_type][id][day_tm2seconds(time_tm)];
+	}
+	return ris;
+}
+
+//void FlowGraph::setUavPosition(struct std::tm time, Uav *uav) {
 	//TODO TODO graphMapMap[uav->getPositionStopId()][day_tm2seconds(time)]->uavs.push_back(uav);
+//}
+
+void FlowGraph::setUavPosition(NodeGraph *ng, Uav *uav) {
+	if (ng != nullptr) {
+		graphMapMapMap[ng->node_t][ng->node_id][ng->time]->uavs.push_back(uav);
+	}
 }
 
 void FlowGraph::setInitExtraUAV(std::list <Uav *> &remainingUAV, struct std::tm time_tm, std::map<unsigned long int, Stops> &stopsMap) {
@@ -668,9 +683,10 @@ bool FlowGraph::exportDotResult(std::string dotFileName) {
 	int sSize = 2;
 
 	//TODO TODO
-	/*if (fout.is_open()) {
+	if (fout.is_open()) {
 		fout << "digraph G{" << endl;
 
+		/*
 		//for (auto sMap : graphMapMap){
 		for (auto itM = graphMapMap.begin(); itM != graphMapMap.end(); itM++){
 			//for (auto ngMap : sMap.second){
@@ -738,17 +754,74 @@ bool FlowGraph::exportDotResult(std::string dotFileName) {
 					}
 				}
 			}
-		}
+		}*/
 
 		fout << "}" << endl;
 
 		fout.close();
 
 		return true;
-	}*/
+	}
 	return false;
 }
 
+bool FlowGraph::exportDotFullEmptyGraph(std::string dotFileName) {
+
+	std::ofstream fout(dotFileName, std::ofstream::out);
+	std::map<unsigned int, int> mapStops;
+	std::map< std::pair<unsigned int, unsigned int>, bool> mapStopsOK;
+	int cNode = 0;
+	int sOffest = 3;
+	int sSize = 2;
+
+	int nHome = graphMapMapMap[NodeGraph::HOME].size();
+	int nDP = graphMapMapMap[NodeGraph::DELIVERY_POINT].size();
+	//int nStop = graphMapMapMap[NodeGraph::STOP].size();
+	unsigned int time0 = graphMapMapMap[NodeGraph::HOME].begin()->second.begin()->second->time;
+
+	if (fout.is_open()) {
+		fout << "digraph G{" << endl;
+
+		for (auto& l1map : graphMapMapMap) {
+			//for (auto& l2map : l1map.second) {
+			cNode = 0;
+			for (auto it2map = l1map.second.begin(); it2map != l1map.second.end(); ++it2map){
+				//for (auto& l3map : l2map.second) {
+				for (auto& l3map : it2map->second) {
+					NodeGraph *act = l3map.second;
+					int hOffset = 0;
+					std::string shape = std::string("shape=ellipse");
+
+					switch (act->node_t) {
+					case NodeGraph::HOME:
+						hOffset = 0;
+						shape = std::string("shape=diamond");
+						break;
+					case NodeGraph::DELIVERY_POINT:
+						hOffset = nHome * sOffest;
+						shape = std::string("shape=box");
+						break;
+					case NodeGraph::STOP:
+						hOffset = (nHome + nDP) * sOffest;
+						shape = std::string("shape=ellipse");
+						break;
+					}
+
+					fout << "node_" << act->node_t << "_" << act->node_id << "_" << act->time <<
+							" [pos=\"" << (act->time - time0) * sOffest << "," << hOffset + (cNode * sOffest) <<
+							"!\" width=" << sSize << ", height=" << sSize << ", " << shape << "]" << endl;
+				}
+
+				++cNode;
+			}
+		}
+
+		fout << "}" << endl;
+		fout.close();
+		return true;
+	}
+	return false;
+}
 
 
 

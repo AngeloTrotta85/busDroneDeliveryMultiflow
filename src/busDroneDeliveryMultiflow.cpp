@@ -92,10 +92,6 @@ int main(int argc, char **argv) {
 		std::srand(std::time(0)); // use current time as seed for random generator
 	}
 
-	// set the maximum simulation time
-	//sim.setMaxTime(100);
-	sim.setMaxTime(std::numeric_limits<unsigned int>::max());	//DEPRECATED
-
 	//set the number of UAV
 	const std::string &nUavString = input.getCmdOption("-nUAV");
 	if (!nUavString.empty()) {
@@ -114,11 +110,14 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	if (input.cmdOptionExists("-noRun")) exit (EXIT_SUCCESS);
-
-	// run the simulation
-	cout << "Running the simulation" << endl;
-	sim.run();
+	if (input.cmdOptionExists("-noRun")) {
+		cout << "Skipping the simulation (-noRun is set)" << endl;
+	}
+	else {
+		// run the simulation
+		cout << "Running the simulation" << endl;
+		sim.run();
+	}
 
 	// make stats
 	cout << "Making stats" << endl;
@@ -135,6 +134,11 @@ int main(int argc, char **argv) {
 	const std::string &dotFileName = input.getCmdOption("-d");
 	if (!dotFileName.empty()) {
 		sim.exportDotResult(dotFileName);
+	}
+
+	const std::string &emptyDotFileName = input.getCmdOption("-emptyDot");
+	if (!emptyDotFileName.empty()) {
+		sim.exportDotFullEmptyGraph(emptyDotFileName);
 	}
 
 	cout << "End simulation" << endl;

@@ -25,6 +25,8 @@ class Uav {
 
 public:
 	typedef enum {
+		UAV_WAIT_HOME,
+		UAV_RECHARGING_HOME,
 		UAV_FLYING,
 		UAV_ONBUS
 	} UAV_STATE;
@@ -35,8 +37,10 @@ public:
 
 	double addEnergy(double difference);
 
-	unsigned long int getPositionId() const {		return position_id;	}
-	void setPositionId(unsigned long int positionId) {		position_id = positionId;	}
+	//unsigned long int getPositionId() const {		return position_id;	}
+	//void setPositionId(unsigned long int positionId) {		position_id = positionId;	}
+	NodeGraph *getPositionNode() const {		return position_node;	}
+	void setPositionNode(NodeGraph *positionNode) {		position_node = positionNode;	}
 	double getResudualEnergy() const {		return resudualEnergy;	}
 	void setResudualEnergy(double resudualEnergy) {		this->resudualEnergy = resudualEnergy;	}
 	UAV_STATE getState() const {	return state;	}
@@ -109,7 +113,7 @@ public:
 private:
 	double resudualEnergy;
 	//unsigned long int position_stop_id;
-	unsigned long int position_id;
+	//unsigned long int position_id;
 	//NodeGraph::NODE_TYPE position_type;
 	NodeGraph *position_node;
 	int id;

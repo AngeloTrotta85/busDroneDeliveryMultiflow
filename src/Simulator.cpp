@@ -13,7 +13,6 @@ using namespace std;
 Simulator::Simulator() {
 	time = 0;
 	timeslot = 1;
-	maxTime = 0;
 	nUAV = 5;
 
 	eSTOP = -100;
@@ -86,7 +85,7 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 	cout << "Reading PARAMETERS" << endl;
 
 	// CLUSTERING FLAG
-	const std::string &toClusterString = inputVal->getCmdOption("-c");
+	/*const std::string &toClusterString = inputVal->getCmdOption("-c");
 	if (!toClusterString.empty()) {
 		if (toClusterString.compare("0") == 0) {
 			toCluster = false;
@@ -97,11 +96,11 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 	}
 	else {
 		toCluster = false;
-	}
+	}*/
 
 	// ALGORITHM TYPE
-	const std::string &algoTypeString = inputVal->getCmdOption("-a");
-	/*if (!algoTypeString.empty()) {
+	/*const std::string &algoTypeString = inputVal->getCmdOption("-a");
+	if (!algoTypeString.empty()) {
 		if (algoTypeString.compare("TSP") == 0) {
 			cout << "Setting algo TSP" << endl;
 			flowGraph = new TspGraph(this);
@@ -708,6 +707,10 @@ bool Simulator::exportDotResult(std::string dotFileName) {
 	return flowGraph->exportDotResult(dotFileName);
 }
 
+bool Simulator::exportDotFullEmptyGraph(std::string dotFileName) {
+	return flowGraph->exportDotFullEmptyGraph(dotFileName);
+}
+
 bool Simulator::generateBusRoute(void) {
 	bool ris = true;
 
@@ -898,7 +901,7 @@ void Simulator::generateBothFlyArc(struct std::tm s_time, NodeGraph::NODE_TYPE s
 		NodeGraph::NODE_TYPE a_type, unsigned int a_id, double a_lat, double a_lon, double w) {
 	int flytime;
 	struct std::tm arrival_time;
-	ArcGraph::ARC_TYPE at = (w > 0) ? ArcGraph::FLY_WITH_PACKAGE : ArcGraph::FLY_EMPTY;
+	//ArcGraph::ARC_TYPE at = (w > 0) ? ArcGraph::FLY_WITH_PACKAGE : ArcGraph::FLY_EMPTY;
 
 	flytime = Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, 0);
 	arrival_time = s_time;
@@ -1004,7 +1007,7 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 	act_time = start_time;
 	mktime(&act_time);
 	while (difftime(mktime(&end_time), mktime(&act_time)) >= 0) {
-
+		//double counter = 0;
 		for (auto& st_start : stopsMap) {
 			for (auto& st_end : stopsMap) {
 				if (st_start.second.getStopIdNum() != st_end.second.getStopIdNum()) {
@@ -1020,7 +1023,12 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 				generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
 						NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
 			}
+
+			//fprintf(stdout, "\rGenerating arcs stop->X %.03f%%", (counter / ((double)stopsMap.size())) * 100.0);
+			//++counter;
 		}
+
+		//counter = 0;
 		for (auto& hh_start : homesMap) {
 			for (auto& st_end : stopsMap) {
 				generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
@@ -1036,7 +1044,12 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 				generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
 						NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
 			}
+
+			//fprintf(stdout, "\rGenerating arcs home->X %.03f%%", (counter / ((double)homesMap.size())) * 100.0);
+			//++counter;
 		}
+
+		//counter = 0;
 		for (auto& dp_start : deliveryPointsMap) {
 			for (auto& st_end : stopsMap) {
 				generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
@@ -1046,9 +1059,14 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 				generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
 						NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
 			}
+
+			//fprintf(stdout, "\rGenerating arcs dp->X %.03f%%", (counter / ((double)deliveryPointsMap.size())) * 100.0);
+			//++counter;
 		}
 
-		act_time.tm_sec = act_time.tm_sec + 1;
+		fprintf(stdout, "\rGenerating graph nodes %.03f%%", (100.0 - ((((double) difftime(mktime(&end_time), mktime(&act_time))) / totSimTime) * 100.0)));fflush(stdout);
+		//cout << endl;
+		act_time.tm_sec = act_time.tm_sec + 30;  //TODO parametric
 		mktime(&act_time);
 	}
 	cout << endl << "END GENERATING UAV_MOVEMENT ARCS" << endl; fflush(stdout);
@@ -1075,10 +1093,6 @@ bool Simulator::init(void) {
 	generateGraph(start_sim_time_tm, end_sim_time_tm);
 	cout << "END GENERATING GRAPH" << endl; fflush(stdout);
 
-	cout << "BEGIN INIT FLOWGRAPH" << endl; fflush(stdout);
-	//flowGraph->initPoi(poiMap, tpsFileName);
-	cout << "END INIT FLOWGRAPH" << endl; fflush(stdout);
-
 	// init the UAVs
 	cout << "INIT THE " << nUAV << " UAVs" << endl; fflush(stdout);
 	for (unsigned int i = 0; i < nUAV; i++) {
@@ -1096,6 +1110,8 @@ bool Simulator::init(void) {
 		newUav->setAverageSpeed(uavAvgSpeed);
 		newUav->setBatt(bat);
 
+		newUav->setState(Uav::UAV_WAIT_HOME);
+
 		if (homesMap.size() > 0) {
 			auto hIT = homesMap.begin();
 			int idxRand = rand() % homesMap.size();
@@ -1107,6 +1123,13 @@ bool Simulator::init(void) {
 			newUav->setPosLon(hIT->second.getHomeLonNum());
 			newUav->setPosLat(hIT->second.getHomeLatNum());
 			newUav->setBelongingHome((Home *) (&(hIT->second)));
+			newUav->setPositionNode(flowGraph->getNodePtr(NodeGraph::HOME, hIT->second.getHomeIdNum(), start_sim_time_tm));
+			if (newUav->getPositionNode() == nullptr) {
+				cerr << "Warning no NodeGRaph for the UAVs" << endl;
+			}
+			else {
+				flowGraph->setUavPosition(newUav->getPositionNode(), newUav);
+			}
 		}
 
 		listUav.push_back(newUav);

@@ -14,7 +14,8 @@ Uav::Uav(Simulator *sim) {
 	state = UAV_FLYING;
 
 	resudualEnergy = 0;
-	position_id = std::numeric_limits<unsigned long int>::max();
+	//position_id = std::numeric_limits<unsigned long int>::max();
+	position_node = nullptr;
 
 	timeInStop = timeOnBus = 0;
 

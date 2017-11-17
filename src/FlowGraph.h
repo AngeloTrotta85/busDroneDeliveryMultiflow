@@ -126,13 +126,17 @@ public:
 	void generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd);
 	void generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id, struct std::tm a_time, NodeGraph::NODE_TYPE a_type, unsigned int a_id, ArcGraph::ARC_TYPE at);
 
+	NodeGraph *getNodePtr(NodeGraph::NODE_TYPE n_type, unsigned int id, struct std::tm time_tm);
+
 	virtual void setInitExtraUAV(std::list <Uav *> &remainingUAV, struct std::tm time_tm, std::map<unsigned long int, Stops> &stopsMap);
-	void setUavPosition(struct std::tm time, Uav *uav);
+	//void setUavPosition(struct std::tm time, Uav *uav);
+	void setUavPosition(NodeGraph * ng, Uav *uav);
 	void updateUavOnFlow(unsigned int time);
 	virtual void activateUavFlow(unsigned int time, std::list<Uav *> &uavList);
 	void updateBatteries(Uav *u, unsigned int t);
 
 	bool exportDotResult(std::string dotFileName);
+	bool exportDotFullEmptyGraph(std::string dotFileName);
 
 	void getMinimumPathAll(std::map<unsigned int, std::list<ArcGraph *> > &arcMapList, unsigned int stopStart, unsigned int timeStart);
 	void getMinimumPathFromAll(std::list<ArcGraph *> &arcList, unsigned int stopStart, unsigned int timeStart, unsigned int stopEnd);
