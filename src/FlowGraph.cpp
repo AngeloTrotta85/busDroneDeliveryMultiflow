@@ -6,6 +6,7 @@
  */
 
 #include "FlowGraph.h"
+#include "Simulator.h"
 
 #include <chrono>
 
@@ -18,22 +19,21 @@ FlowGraph::FlowGraph(Simulator *s) {
 }
 
 FlowGraph::~FlowGraph() {
-	for (auto& m : graphMapMap) {
-		m.second.clear();
+	for (auto& t : graphMapMapMap) {
+		for (auto& id : t.second) {
+			for (auto& n : id.second) {
+				delete (n.second);
+			}
+			id.second.clear();
+		}
+		t.second.clear();
 	}
-	graphMapMap.clear();
+	graphMapMapMap.clear();
 }
 
-void FlowGraph::addInitStop(unsigned int stop, struct std::tm time) {
+void FlowGraph::addInitStop(Stops *st_ptr, unsigned int stop, struct std::tm time) {
 	NodeGraph *ng = new NodeGraph(day_tm2seconds(time), stop, NodeGraph::STOP);
-
-	//TODO DEPRECATED remove graphMapMap
-	if (graphMapMap.count(stop) == 0) {
-		std::map<unsigned int, NodeGraph *> newMap;
-		graphMapMap[stop] = newMap;
-	}
-	graphMapMap[stop][day_tm2seconds(time)] = ng;
-	////////////////////////////////////
+	ng->stop_ptr = st_ptr;
 
 	if (graphMapMapMap.count(NodeGraph::STOP) == 0) {
 		std::map<unsigned int, std::map<unsigned int, NodeGraph *> > newMap;
@@ -46,8 +46,9 @@ void FlowGraph::addInitStop(unsigned int stop, struct std::tm time) {
 	graphMapMapMap[NodeGraph::STOP][stop][day_tm2seconds(time)] = ng;
 }
 
-void FlowGraph::addInitHome(unsigned int home, struct std::tm time) {
+void FlowGraph::addInitHome(Home *h_ptr, unsigned int home, struct std::tm time) {
 	NodeGraph *ng = new NodeGraph(day_tm2seconds(time), home, NodeGraph::HOME);
+	ng->home_ptr = h_ptr;
 
 	if (graphMapMapMap.count(NodeGraph::HOME) == 0) {
 		std::map<unsigned int, std::map<unsigned int, NodeGraph *> > newMap;
@@ -60,8 +61,9 @@ void FlowGraph::addInitHome(unsigned int home, struct std::tm time) {
 	graphMapMapMap[NodeGraph::HOME][home][day_tm2seconds(time)] = ng;
 }
 
-void FlowGraph::addInitDeliveryPoint(unsigned int dp, struct std::tm time) {
+void FlowGraph::addInitDeliveryPoint(DeliveryPoint *dp_ptr, unsigned int dp, struct std::tm time) {
 	NodeGraph *ng = new NodeGraph(day_tm2seconds(time), dp, NodeGraph::DELIVERY_POINT);
+	ng->dp_ptr = dp_ptr;
 
 	if (graphMapMapMap.count(NodeGraph::DELIVERY_POINT) == 0) {
 		std::map<unsigned int, std::map<unsigned int, NodeGraph *> > newMap;
@@ -74,35 +76,32 @@ void FlowGraph::addInitDeliveryPoint(unsigned int dp, struct std::tm time) {
 	graphMapMapMap[NodeGraph::DELIVERY_POINT][dp][day_tm2seconds(time)] = ng;
 }
 
-void FlowGraph::addFollowingStop(unsigned int stop, struct std::tm time) {
-	//TODO DEPRECATED remove graphMapMap
-	if (graphMapMap.count(NodeGraph::STOP) > 0) {
-		NodeGraph *ng = new NodeGraph(day_tm2seconds(time), stop, NodeGraph::STOP);
-		graphMapMap[stop][day_tm2seconds(time)] = ng;
-	}
-	////////////////////////////////////
+void FlowGraph::addFollowingStop(Stops *st_ptr, unsigned int stop, struct std::tm time) {
 
 	if (graphMapMapMap.count(NodeGraph::STOP) > 0) {
 		if (graphMapMapMap[NodeGraph::STOP].count(stop) > 0) {
 			NodeGraph *ng = new NodeGraph(day_tm2seconds(time), stop, NodeGraph::STOP);
+			ng->stop_ptr = st_ptr;
 			graphMapMapMap[NodeGraph::STOP][stop][day_tm2seconds(time)] = ng;
 		}
 	}
 }
 
-void FlowGraph::addFollowingHome(unsigned int home, struct std::tm time) {
+void FlowGraph::addFollowingHome(Home *h_ptr, unsigned int home, struct std::tm time) {
 	if (graphMapMapMap.count(NodeGraph::HOME) > 0) {
 		if (graphMapMapMap[NodeGraph::HOME].count(home) > 0) {
 			NodeGraph *ng = new NodeGraph(day_tm2seconds(time), home, NodeGraph::HOME);
+			ng->home_ptr = h_ptr;
 			graphMapMapMap[NodeGraph::HOME][home][day_tm2seconds(time)] = ng;
 		}
 	}
 }
 
-void FlowGraph::addFollowingDeliveryPoint(unsigned int dp, struct std::tm time) {
+void FlowGraph::addFollowingDeliveryPoint(DeliveryPoint *dp_ptr, unsigned int dp, struct std::tm time) {
 	if (graphMapMapMap.count(NodeGraph::DELIVERY_POINT) > 0) {
 		if (graphMapMapMap[NodeGraph::DELIVERY_POINT].count(dp) > 0) {
 			NodeGraph *ng = new NodeGraph(day_tm2seconds(time), dp, NodeGraph::DELIVERY_POINT);
+			ng->dp_ptr = dp_ptr;
 			graphMapMapMap[NodeGraph::DELIVERY_POINT][dp][day_tm2seconds(time)] = ng;
 		}
 	}
@@ -128,6 +127,17 @@ void FlowGraph::generateStaticArcsHome(unsigned int id, struct std::tm time1, st
 		newArcStop->src = graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time1)];
 		newArcStop->dest = graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time2)];
 		graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time1)]->arcs.push_back(newArcStop);
+	}
+}
+
+void FlowGraph::generateStaticArcsDeliveryPoint(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at) {
+	if ((graphMapMapMap.count(NodeGraph::DELIVERY_POINT) > 0) && (graphMapMapMap[NodeGraph::DELIVERY_POINT].count(id) > 0)) {
+
+		ArcGraph *newArcStop = new ArcGraph();
+		newArcStop->arc_t = at;
+		newArcStop->src = graphMapMapMap[NodeGraph::DELIVERY_POINT][id][day_tm2seconds(time1)];
+		newArcStop->dest = graphMapMapMap[NodeGraph::DELIVERY_POINT][id][day_tm2seconds(time2)];
+		graphMapMapMap[NodeGraph::DELIVERY_POINT][id][day_tm2seconds(time1)]->arcs.push_back(newArcStop);
 	}
 }
 
@@ -228,6 +238,61 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 	//	cout << "Type: " << a->arc_t << "; U_N: " << a->uavOnTheArc.size() << " " << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << ". ";
 	//}
 	//cout << endl;
+
+	for (auto itA = activeArc.begin(); itA != activeArc.end(); itA++) {
+		ArcGraph *a = *itA;
+		if (a->dest->time == time) {
+			for (auto& u : a->uavOnTheArc) {
+				Package *deliveredP;
+				Battery *battUAV;
+
+				//graphMapMapMap[a->dest->stop_id][a->dest->time]->uavs.push_back(u);
+				a->dest->uavs.push_back(u);
+				u->setPositionNode(a->dest);
+
+				switch (a->dest->node_t) {
+					case NodeGraph::HOME:
+						u->setState(Uav::UAV_WAIT_HOME);	// I'm arrived back home
+						// release the battery
+						battUAV = u->removeBatt();
+						if (battUAV != nullptr) {
+							a->dest->home_ptr->bm.addBattery(battUAV);
+						}
+						u->setPosLat(a->dest->home_ptr->getHomeLatNum());
+						u->setPosLon(a->dest->home_ptr->getHomeLonNum());
+						break;
+
+					case NodeGraph::DELIVERY_POINT:
+						u->setState(Uav::UAV_WAIT_DP);	// I reached the delivery point
+
+						deliveredP = u->removeCarryingPackage();
+						a->dest->dp_ptr->manageArrivedPackage(deliveredP);
+
+						u->setPosLat(a->dest->dp_ptr->getDpLatNum());
+						u->setPosLon(a->dest->dp_ptr->getDpLonNum());
+
+						break;
+
+					case NodeGraph::STOP:
+					default:
+						cerr << "WARNING in updateUavOnFlow. Unexpected NodeGraph: " << a->dest->node_t << endl;
+						break;
+				}
+			}
+		}
+	}
+
+	// MAH! FACCIO UNA COPIA PER ELIMINARE GLI ARCHI TERMINATI
+	std::list<ArcGraph *> activeArc_copy;
+	for (auto& a : activeArc) {
+		activeArc_copy.push_back(a);
+	}
+	activeArc.clear();
+	for (auto& a : activeArc_copy) {
+		if (a->dest->time > time) {
+			activeArc.push_back(a);
+		}
+	}
 
 	//TODO TODO
 /*
@@ -603,7 +668,170 @@ void FlowGraph::getMinimumPathFromAll(std::list<ArcGraph *> &arcList, unsigned i
 	}
 }
 
+bool FlowGraph::check_pkt_feasibility(double s_lat, double s_lon, Package *p, Battery *b) {
+	bool ris = false;
+	double requestedEnergy = 0;
+	double energy_loss, distance_travel, speed_travel, time_travel;
+
+	//cout << "Checking feasibility to carry the package till the DP" << endl;
+
+	// calculate first part
+	energy_loss = sim->getEnergyLossUav(p->weight);
+	distance_travel = Simulator::distanceEarth(s_lat, s_lon, p->dest_dp->getDpLatNum(), p->dest_dp->getDpLonNum());
+	speed_travel = Uav::getSpeedWithLoad(sim->getUavAvgSpeed(), p->weight);
+	time_travel = distance_travel / speed_travel;
+	requestedEnergy += energy_loss * time_travel;
+	//cout << "Andata: el=" << energy_loss << "W; dist=" << distance_travel << "m; speed=" << speed_travel << "m/s; time="
+	//		<< time_travel << "s; reqE=" << requestedEnergy << endl;
+
+	// calculate coming back
+	energy_loss = sim->getEnergyLossUav(0);
+	distance_travel = Simulator::distanceEarth(p->dest_dp->getDpLatNum(), p->dest_dp->getDpLonNum(), s_lat, s_lon);
+	speed_travel = Uav::getSpeedWithLoad(sim->getUavAvgSpeed(), 0);
+	time_travel = distance_travel / speed_travel;
+	requestedEnergy += energy_loss * time_travel;
+	//cout << "Ritorno: el=" << energy_loss << "W; dist=" << distance_travel << "m; speed=" << speed_travel << "m/s; time="
+	//		<< time_travel << "s; reqE=" << (energy_loss * time_travel) << endl;
+	//cout << "Total req = " << requestedEnergy << "J. Energia disponibile: " << b->getResudualEnergy() << endl << endl;
+
+	if ((b->getResudualEnergy() + requestedEnergy) > (b->getResudualEnergy() * 0.1)) {
+		//estimatedEnergyLossOnPackage = requestedEnergy;
+		//energyAtPackageLoad = batt->getResudualEnergy();
+		ris = true;
+	}
+
+	return ris;
+}
+
 void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
+	for (auto& u : uavList){
+		NodeGraph *ng = u->getPositionNode();
+		Home *waitingHome;
+		Battery *bToLoad = nullptr;
+		ArcGraph *aToUse_inDP = nullptr;
+
+		switch (u->getState()) {
+		case Uav::UAV_FLYING:
+			// DO NOTHING... I'M FLYING
+			break;
+
+		/*case Uav::UAV_ONBUS:
+
+			break;*/
+
+		case Uav::UAV_WAIT_DP:
+			// search for the arc that will send me back to my home
+			//cout << "UAV " << u->getId() << " is in UAV_WAIT_DP. Looking for a path to home. Arcs number: " << ng->arcs.size() << endl;
+			for (auto a : ng->arcs) {
+				if (a->arc_t == ArcGraph::FLY_EMPTY) {
+					NodeGraph *dNG = a->dest;
+					if ((dNG->node_t == NodeGraph::HOME) && (u->getBelongingHome()->getHomeIdNum() == dNG->node_id)) {
+						// I found a direct arc (without payload) toward my home
+						aToUse_inDP = a;
+						break;
+					}
+				}
+			}
+			if (aToUse_inDP != nullptr) {
+				aToUse_inDP->uavOnTheArc.push_back(u);
+				activeArc.push_back(aToUse_inDP);
+				u->setState(Uav::UAV_FLYING);
+				u->setActualArch(aToUse_inDP);
+				//cout << "UAV " << u->getId() << " Path to home found" << endl;
+			}
+			else {
+				// I didn't find a direct graph (there is not a fly arch for each node).. so I wait here
+				for (auto a : ng->arcs) {
+					if (a->arc_t == ArcGraph::STOP) {
+						a->uavOnTheArc.push_back(u);
+						activeArc.push_back(a);
+						u->setActualArch(a);
+						//cout << "UAV " << u->getId() << " Path to home NOT found. Waiting here" << endl;
+						break;
+					}
+				}
+			}
+			break;
+
+		case Uav::UAV_WAIT_HOME:
+			waitingHome = u->getBelongingHome();
+			//cout << "UAV " << u->getId() << " is in UAV_WAIT_HOME" << endl;
+			//cout << "UAV " << u->getId() << " bSTATE: " << u->getBatt() << " and pSTATE: " << u->getCarryingPackage() << endl;
+			if ((u->getBatt() == nullptr) && (u->getCarryingPackage() == nullptr)) {
+				//cout << "UAV " << u->getId() << " has no battery nor a package. Are there available package? " << waitingHome->wa.getWarehousePktNumber() << endl;
+				if (waitingHome->wa.getWarehousePktNumber() > 0) {
+					Package *pckToCarry = nullptr;
+					for (auto& b : waitingHome->bm.batteryList) {
+						//for (auto& p : belongingHome->wa.wareHouse) {
+						for (auto itP = waitingHome->wa.wareHouse.begin(); itP != waitingHome->wa.wareHouse.end(); itP++) {
+							if (check_pkt_feasibility(waitingHome->getHomeLatNum(), waitingHome->getHomeLonNum(), *itP, b)) {
+								pckToCarry = *itP;
+								waitingHome->wa.wareHouse.erase(itP);
+								break;
+							}
+						}
+						if (pckToCarry != nullptr) {
+							bToLoad = waitingHome->bm.popBattery(b->id_batt);
+							break;
+						}
+					}
+					if ((pckToCarry != nullptr) && (bToLoad != nullptr)) {
+						bToLoad->setState(Battery::BATTERY_DISCHARGING_ONUAV);
+						u->setBatt(bToLoad);
+						u->setCarryingPackage(pckToCarry);
+						//cout << "UAV " << u->getId() << " found the Battery"<< bToLoad->id_batt << " and the Package" << pckToCarry->id << endl;
+					}
+				}
+			}
+
+			// did I found/do I have a package to carry?
+			if ((u->getBatt() != nullptr) && (u->getCarryingPackage() != nullptr)) {
+				Package *actPckToCarry = u->getCarryingPackage();
+				//cout << "UAV " << u->getId() << " is in UAV_WAIT_HOME and has a package and battery... looking for a path" << endl;
+				ArcGraph *aToUse = nullptr;
+				for (auto a : ng->arcs) {
+					if (a->arc_t == ArcGraph::FLY_WITH_PACKAGE) {
+						NodeGraph *dNG = a->dest;
+						if ((dNG->node_t == NodeGraph::DELIVERY_POINT) && (actPckToCarry->dest_dp->getDpIdNum() == dNG->node_id)) {
+							// I found a direct arc (with payload) toward the delivery point
+							aToUse = a;
+							break;
+						}
+					}
+				}
+				if (aToUse != nullptr) {
+					aToUse->uavOnTheArc.push_back(u);
+					activeArc.push_back(aToUse);
+					u->setState(Uav::UAV_FLYING);
+					u->setActualArch(aToUse);
+					//cout << "UAV " << u->getId() << " path found" << endl;
+				}
+				else {
+					// I didn't find a direct graph (there is not a fly arch for each node).. so I wait here
+					for (auto a : ng->arcs) {
+						if (a->arc_t == ArcGraph::STOP) {
+							a->uavOnTheArc.push_back(u);
+							activeArc.push_back(a);
+							u->setActualArch(a);
+							//cout << "UAV " << u->getId() << " NO path found... waiting here" << endl;
+
+							// relaase the package and the battery
+							waitingHome->bm.addBattery(u->removeBatt());
+							waitingHome->wa.addPackage(u->removeCarryingPackage());
+							break;
+						}
+					}
+				}
+			}
+
+			break;
+
+		default:
+			cerr << "Unknown UAV state: " << u->getState() << endl;
+			break;
+		}
+	}
+
 	//TODO TODO
 	/*
 	for (auto& u : uavList){
@@ -678,9 +906,9 @@ bool FlowGraph::exportDotResult(std::string dotFileName) {
 	std::ofstream fout(dotFileName, std::ofstream::out);
 	std::map<unsigned int, int> mapStops;
 	std::map< std::pair<unsigned int, unsigned int>, bool> mapStopsOK;
-	int cNode = 0;
-	int sOffest = 3;
-	int sSize = 2;
+	//int cNode = 0;
+	//int sOffest = 3;
+	//int sSize = 2;
 
 	//TODO TODO
 	if (fout.is_open()) {

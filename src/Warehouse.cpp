@@ -66,4 +66,9 @@ void Warehouse::update(struct std::tm now_time_tm, std::map<unsigned int, Delive
 	}
 }
 
+void Warehouse::addPackage(Package *p) {
+	wareHouse.push_back(p);
+}
+
+
 

@@ -126,6 +126,8 @@ public:
 
 	void importSomeParameterFromInputLine(InputParser *inputVal);
 
+	double getEnergyLossUav(double load);
+
 	unsigned int getTime() const { return time; }
 	double getStopsMaxLat() const {		return stopsMaxLat;	}
 	void setStopsMaxLat(double stopsMaxLat) {		this->stopsMaxLat = stopsMaxLat;	}
@@ -141,6 +143,8 @@ public:
 	void setUav(unsigned int uav) {		nUAV = uav;	}
 	unsigned int getTimeslot() const {		return timeslot;	}
 	void setTimeslot(unsigned int timeslot) {		this->timeslot = timeslot;	}
+	double getUavAvgSpeed() const {		return uavAvgSpeed;	}
+	void setUavAvgSpeed(double uavAvgSpeed) {		this->uavAvgSpeed = uavAvgSpeed;	}
 	bool isToCluster() const {		return toCluster;	}
 
 public:
@@ -174,8 +178,9 @@ public:
 		return ( first.stop_sequence < second.stop_sequence );
 	}
 
+
 private:
-	void updateBatteries(Uav *u);
+	void updateBatteries(Uav *u, unsigned int time_step);
 
 	void generateGraph(struct std::tm start_time, struct std::tm end_time);
 
@@ -188,11 +193,14 @@ private:
 	unsigned int time;
 	unsigned int timeslot;	//seconds
 
+	unsigned int uavOffsetMovement;
+
 	unsigned int nUAV;
 
 	double initialUavEnergy; //Joule
 	double maxUavEnergy; 	// Joule
 	double uavAvgSpeed;		 	// m/s
+	double packageWeight;		// grams
 
 	double maxDistancePoiStop; // meters
 
@@ -200,15 +208,14 @@ private:
 
 	bool toCluster;
 
-	bool setRandomPoint;
-	int numberOfRandomPoint;
-
 	// Watt
 	double eSTOP;
 	double eRELAY;
 	double eRECORDING;
 	double eRECORDINGRELAY;
-	double eRECHARGING;
+	double eRECHARGING_BUS;
+	double eRECHARGING_HOME;
+	double eFLYING_FREE;
 
 	double stopsMinLat;
 	double stopsMaxLat;

@@ -19,6 +19,7 @@
 
 class Simulator;
 class NodeGraph;
+class ArcGraph;
 
 class Uav {
 	static int idCounter;
@@ -26,41 +27,50 @@ class Uav {
 public:
 	typedef enum {
 		UAV_WAIT_HOME,
-		UAV_RECHARGING_HOME,
-		UAV_FLYING,
-		UAV_ONBUS
+		UAV_WAIT_DP,
+		UAV_WAIT_STOP,
+		UAV_FLYING
 	} UAV_STATE;
 
 public:
 	Uav(Simulator *sim);
 	virtual ~Uav();
 
-	double addEnergy(double difference);
+	double addEnergy(double watt, double seconds);
 
 	//unsigned long int getPositionId() const {		return position_id;	}
 	//void setPositionId(unsigned long int positionId) {		position_id = positionId;	}
 	NodeGraph *getPositionNode() const {		return position_node;	}
 	void setPositionNode(NodeGraph *positionNode) {		position_node = positionNode;	}
-	double getResudualEnergy() const {		return resudualEnergy;	}
-	void setResudualEnergy(double resudualEnergy) {		this->resudualEnergy = resudualEnergy;	}
+	ArcGraph* getActualArch()  {		return actual_arch;	}
+	void setActualArch(ArcGraph* actualArch) {		actual_arch = actualArch;	}
+	double getResudualEnergy();
+	void setResudualEnergy(double resudualEnergy);
 	UAV_STATE getState() const {	return state;	}
 	void setState(UAV_STATE state) {		this->state = state;	}
 	double getAverageSpeed() const {		return averageSpeed;	}
 	void setAverageSpeed(double averageSpeed) {		this->averageSpeed = averageSpeed;	}
 	int getId() const {		return id;	}
-	Battery* getBatt() {		return batt;	}
 	Home* getBelongingHome()  {		return belongingHome;	}
 	void setBelongingHome(Home* belongingHome) {		this->belongingHome = belongingHome;	}
+	Battery* getBatt() {		return batt;	}
 	void setBatt(Battery* batt) {		this->batt = batt;	}
+	Battery* removeBatt(void) { Battery* ris = this->batt; this->batt = nullptr; return ris; }
 	double getPosLon() const {		return pos_lon;	}
 	void setPosLon(double posLon) {		pos_lon = posLon;	}
 	double getPosLat() const {		return pos_lat;	}
 	void setPosLat(double posLat) {		pos_lat = posLat;	}
+	Package* getCarryingPackage() {		return carryingPackage;	}
+	void setCarryingPackage(Package* carryingPackage) {		this->carryingPackage = carryingPackage;	}
+	Package* removeCarryingPackage(void) { Package* ris = this->carryingPackage; this->carryingPackage = nullptr; return ris; }
+	bool isCarryingPackage(void) { return this->carryingPackage != nullptr; }
 
 	unsigned int getTimeInStop() const {		return timeInStop;	}
 	void addTimeInStop(unsigned int timeInStop_val) {		this->timeInStop += timeInStop_val;	}
 	unsigned int getTimeOnBus() const {		return timeOnBus;	}
 	void addTimeOnBus(unsigned int timeOnBus_val) {		this->timeOnBus += timeOnBus_val;	}
+
+	bool hasFullBattery(void) { return batt->isFull(); }
 
 public:
 	// This function converts decimal degrees to radians
@@ -89,33 +99,39 @@ public:
 		return 2.0 * 6371.0 * asin(sqrt(u * u + cos(lat1r) * cos(lat2r) * v * v)) * 1000.0;
 	}
 
-	static int getFlyTime_sec(double s_lat, double s_lon, double a_lat, double a_lon, double baseSpeed, double w) {
-		double dist = distanceEarth(s_lat, s_lon, a_lat, a_lon);
+	static double getSpeedWithLoad(double speedNoLoad, double loadW) {
+		double maxW = 4000.0;
+		double packagePenality = 0.6;
 		double speedUAV;
 
-		if (w <= 0) {
-			speedUAV = baseSpeed;
+		if (loadW <= 0) {
+			speedUAV = speedNoLoad;
 		}
 		else {
-			double maxW = 4000.0;
-			double packagePenality = 0.6;
-			if (w >= maxW) {
-				speedUAV = baseSpeed * packagePenality;
+			if (loadW >= maxW) {
+				speedUAV = speedNoLoad * packagePenality;
 			}
 			else {
-				speedUAV = (baseSpeed - ((baseSpeed * w * (1.0 - packagePenality)) / maxW));
+				speedUAV = (speedNoLoad - ((speedNoLoad * loadW * (1.0 - packagePenality)) / maxW));
 			}
 		}
+		return speedUAV;
+	}
+
+	static int getFlyTime_sec(double s_lat, double s_lon, double a_lat, double a_lon, double baseSpeed, double w) {
+		double dist = distanceEarth(s_lat, s_lon, a_lat, a_lon);
+		double speedUAV = getSpeedWithLoad(baseSpeed, w);
 
 		return ((int) dist / speedUAV);
 	}
 
 private:
-	double resudualEnergy;
+	//double resudualEnergy;
 	//unsigned long int position_stop_id;
 	//unsigned long int position_id;
 	//NodeGraph::NODE_TYPE position_type;
 	NodeGraph *position_node;
+	ArcGraph *actual_arch;
 	int id;
 	double averageSpeed;
 
@@ -130,6 +146,7 @@ private:
 	Simulator *simulator;
 	Battery *batt;
 	Home *belongingHome;
+	Package *carryingPackage;
 };
 
 

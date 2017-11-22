@@ -32,6 +32,8 @@ public:
 	void initTime(struct std::tm start_time_tm);
 	void update(struct std::tm now_time_tm, std::map<unsigned int, DeliveryPoint> &dp);
 
+	void addPackage(Package *p);
+
 	void setDefaultWeight_grams(double defaultWeight) { this->defaultWeight = defaultWeight;	}
 	void setPacketInitNumber(double packetNumber, std::map<unsigned int, DeliveryPoint> &dp);
 	void setPacketGenerationRate(double packetGenerationRate) {		this->packetGenerationRate = packetGenerationRate;	}

@@ -31,7 +31,7 @@ public:
 	Battery();
 	virtual ~Battery();
 
-	double addEnergy(double difference, double seconds);
+	double addEnergy(double watt, double seconds);
 	bool isFull(void) {return (resudualEnergy == maxEnergy);};
 
 	double getMaxEnergy() const {		return maxEnergy;	}
@@ -45,6 +45,10 @@ private:
 	double resudualEnergy;
 	double maxEnergy;
 	BATTERY_STATE state;
+
+public:
+	static int id_batt_counter;
+	int id_batt;
 };
 
 #endif /* BATTERY_H_ */

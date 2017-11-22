@@ -34,10 +34,13 @@ public:
 
 	void printBatteriesState(void);
 
-private:
+	Battery *popBattery(int id_battery);
+	void addBattery(Battery *nb);
+
+public:
 	std::list<Battery *> batteryList;
 	std::list<Charger *> chargerList;
-
+private:
 	struct std::tm lastUpdate;
 };
 

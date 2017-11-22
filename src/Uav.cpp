@@ -13,14 +13,15 @@ Uav::Uav(Simulator *sim) {
 	simulator = sim;
 	state = UAV_FLYING;
 
-	resudualEnergy = 0;
 	//position_id = std::numeric_limits<unsigned long int>::max();
 	position_node = nullptr;
+	actual_arch = nullptr;
 
 	timeInStop = timeOnBus = 0;
 
 	belongingHome = nullptr;
 	batt = nullptr;
+	carryingPackage = nullptr;
 	averageSpeed = 10;
 
 	pos_lon = 0;
@@ -33,11 +34,25 @@ Uav::~Uav() {
 	// TODO Auto-generated destructor stub
 }
 
-double Uav::addEnergy(double difference) {
+double Uav::getResudualEnergy()  {
+	if (batt != nullptr) {
+		return batt->getResudualEnergy();
+	}
+	else {
+		return 0;
+	}
+}
 
-	resudualEnergy += difference;
+void Uav::setResudualEnergy(double resudualEnergy) {
+	if (batt != nullptr) {
+		batt->setResudualEnergy(resudualEnergy);
+	}
 
-	return resudualEnergy;
+}
+
+double Uav::addEnergy(double watt, double seconds) {
+
+	return batt->addEnergy(watt, seconds);
 }
 
 

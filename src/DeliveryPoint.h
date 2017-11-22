@@ -17,6 +17,8 @@
 #include <time.h>        // struct std::tm
 #include <list>        // struct std::tm
 
+class Package;
+
 using namespace std;
 using namespace boost;
 
@@ -35,6 +37,7 @@ public:
 	virtual ~DeliveryPoint();
 
 	bool parseInput(const std::string toParse);
+	void manageArrivedPackage(Package *);
 
 	const std::string& getDpId() const {		return dp_id;	}
 	unsigned int getDpIdNum() const {		return dp_id_num;	}

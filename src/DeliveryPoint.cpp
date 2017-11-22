@@ -6,6 +6,7 @@
  */
 
 #include "DeliveryPoint.h"
+#include "Package.h"
 
 DeliveryPoint::DeliveryPoint() {
 	// TODO Auto-generated constructor stub
@@ -55,5 +56,9 @@ bool DeliveryPoint::parseInput(const std::string toParse) {
 	}
 
 	return ris;
+}
+
+void DeliveryPoint::manageArrivedPackage(Package *p) {
+	delete (p);
 }
 

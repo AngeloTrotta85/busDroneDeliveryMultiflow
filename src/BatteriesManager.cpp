@@ -83,3 +83,19 @@ void BatteriesManager::update(struct std::tm now_time_tm) {
 	lastUpdate = now_time_tm;
 }
 
+Battery *BatteriesManager::popBattery(int id_battery) {
+	Battery *ris = nullptr;
+	for (auto it = batteryList.begin(); it != batteryList.end(); it++) {
+		if ((*it)->id_batt == id_battery) {
+			ris = *it;
+			batteryList.erase(it);
+			break;
+		}
+	}
+	return ris;
+}
+
+void BatteriesManager::addBattery(Battery *nb) {
+	batteryList.push_back(nb);
+}
+

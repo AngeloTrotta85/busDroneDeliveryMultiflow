@@ -41,6 +41,7 @@ public:
 	ArcGraph(){
 		src = nullptr;
 		dest = nullptr;
+		batt = nullptr;
 		arc_t = STOP;
 		reserved = false;
 	};
@@ -51,6 +52,7 @@ public:
 	NodeGraph *dest;
 	ARC_TYPE arc_t;
 	std::list<Uav *> uavOnTheArc;
+	Battery *batt;
 	bool reserved;
 };
 
@@ -88,6 +90,9 @@ public:
 		bfs_state = NOT_VISITED;
 		distenace_from_root = std::numeric_limits<int>::max();
 		predecessor_arc = nullptr;
+		stop_ptr = nullptr;
+		home_ptr = nullptr;
+		dp_ptr = nullptr;
 	};
 	virtual ~NodeGraph(){
 		arcs.clear();
@@ -102,6 +107,11 @@ public:
 	std::list<ArcGraph *> arcs;
 	std::list<Uav *> uavs;
 
+	//possible pointers
+	Stops *stop_ptr;
+	Home *home_ptr;
+	DeliveryPoint *dp_ptr;
+
 	//BFS variables
 	BFS_STATE bfs_state;
 	int distenace_from_root;
@@ -115,14 +125,15 @@ public:
 
 	void execute(struct std::tm time, std::list<Uav *> &uavList);
 
-	void addInitStop(unsigned int stop, struct std::tm time);
-	void addInitHome(unsigned int home, struct std::tm time);
-	void addInitDeliveryPoint(unsigned int dp, struct std::tm time);
-	void addFollowingStop(unsigned int stop, struct std::tm time);
-	void addFollowingHome(unsigned int home, struct std::tm time);
-	void addFollowingDeliveryPoint(unsigned int dp, struct std::tm time);
+	void addInitStop(Stops *st_ptr, unsigned int stop, struct std::tm time);
+	void addInitHome(Home *h_ptr, unsigned int home, struct std::tm time);
+	void addInitDeliveryPoint(DeliveryPoint *dp_ptr, unsigned int dp, struct std::tm time);
+	void addFollowingStop(Stops *st_ptr, unsigned int stop, struct std::tm time);
+	void addFollowingHome(Home *h_ptr, unsigned int home, struct std::tm time);
+	void addFollowingDeliveryPoint(DeliveryPoint *dp_ptr, unsigned int dp, struct std::tm time);
 	void generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
 	void generateStaticArcsHome(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
+	void generateStaticArcsDeliveryPoint(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
 	void generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd);
 	void generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id, struct std::tm a_time, NodeGraph::NODE_TYPE a_type, unsigned int a_id, ArcGraph::ARC_TYPE at);
 
@@ -142,6 +153,8 @@ public:
 	void getMinimumPathFromAll(std::list<ArcGraph *> &arcList, unsigned int stopStart, unsigned int timeStart, unsigned int stopEnd);
 	void getMinimumPathToFew(std::map<unsigned int, std::list<ArcGraph *> > &arcMapList, std::map<unsigned int, unsigned int > &arcMapListCost, unsigned int stopStart, unsigned int timeStart, std::vector<Stops *> &stopsEnd);
 
+	bool check_pkt_feasibility(double s_lat, double s_lon, Package *p, Battery *b);
+
 	static unsigned int day_tm2seconds(struct std::tm t) {
 		return (t.tm_sec + (60 * (t.tm_min + (60.0 * t.tm_hour))));
 	}
@@ -157,9 +170,9 @@ public:
 	unsigned int getSwapCount() const {		return swapCount;	}
 
 protected:
-	std::map<unsigned int, std::map<unsigned int, NodeGraph *> > graphMapMap;
+	//std::map<unsigned int, std::map<unsigned int, NodeGraph *> > graphMapMap;
 	std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::map<unsigned int, NodeGraph *> > > graphMapMapMap;
-	std::map<unsigned int, std::vector<NodeGraph *> > graphMapVec;
+	//std::map<unsigned int, std::vector<NodeGraph *> > graphMapVec;
 	std::list<ArcGraph *> activeArc;
 
 	Simulator *sim;

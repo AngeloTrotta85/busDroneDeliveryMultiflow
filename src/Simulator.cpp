@@ -19,7 +19,13 @@ Simulator::Simulator() {
 	eRELAY = -120;
 	eRECORDING = -150;
 	eRECORDINGRELAY = -170;
-	eRECHARGING = 25;
+	eRECHARGING_BUS = 25;
+	eRECHARGING_HOME = 25;
+	eFLYING_FREE = -50;
+
+	uavOffsetMovement = 10;
+
+	packageWeight = 1000;
 
 	uavAvgSpeed = 20;
 
@@ -57,9 +63,6 @@ Simulator::Simulator() {
 	toCluster = false;
 
 	finalLifetime = 0;
-
-	setRandomPoint = false;
-	numberOfRandomPoint = 0;
 }
 
 Simulator::~Simulator() { }
@@ -188,6 +191,15 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 		uavAvgSpeed = 20;
 	}
 
+	// PACKAGE WIDTH
+	const std::string &packageWeightString = inputVal->getCmdOption("-pckW");
+	if (!packageWeightString.empty()) {
+		packageWeight = atof(packageWeightString.c_str());
+	}
+	else {
+		packageWeight =1000;
+	}
+
 	// MAX BATTERY ENERGY
 	const std::string &maxBattString = inputVal->getCmdOption("-maxB");
 	if (!maxBattString.empty()) {
@@ -231,12 +243,30 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 	}
 
 	// ENERGY IF UAV IS RECHARGING ON BUS
-	const std::string &eRechargingString = inputVal->getCmdOption("-eCHA");
-	if (!eRechargingString.empty()) {
-		eRECHARGING = atof(eRechargingString.c_str());
+	const std::string &eRechargingBusString = inputVal->getCmdOption("-eCHABUS");
+	if (!eRechargingBusString.empty()) {
+		eRECHARGING_BUS = atof(eRechargingBusString.c_str());
 	}
 	else {
-		eRECHARGING = 25;
+		eRECHARGING_BUS = 25;
+	}
+
+	// ENERGY IF UAV IS RECHARGING AT HOME
+	const std::string &eRechargingHomeString = inputVal->getCmdOption("-eCHAHOME");
+	if (!eRechargingHomeString.empty()) {
+		eRECHARGING_HOME = atof(eRechargingHomeString.c_str());
+	}
+	else {
+		eRECHARGING_HOME = 25;
+	}
+
+	// ENERGY FLYing FREE
+	const std::string &eFlyingFreeStr = inputVal->getCmdOption("-eFLYFREE");
+	if (!eFlyingFreeStr.empty()) {
+		eFLYING_FREE = atof(eFlyingFreeStr.c_str());
+	}
+	else {
+		eFLYING_FREE = -50;
 	}
 
 	// MAP BOUNDARY-1
@@ -287,14 +317,13 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 		cout << "Looking for stops in boundaries 4: " << newB.minLAT << "," << newB.minLON << ";" << newB.maxLAT << "," << newB.maxLON << endl;
 	}
 
-	//POI random points
-	const std::string &randomPoiString = inputVal->getCmdOption("-randPOI");
-	if (!randomPoiString.empty()) {
-		setRandomPoint = true;
-		numberOfRandomPoint = atol(randomPoiString.c_str());
+	//UAV movement time offset
+	const std::string &uavMovOffset = inputVal->getCmdOption("-uavMovOffset");
+	if (!uavMovOffset.empty()) {
+		uavOffsetMovement = atol(uavMovOffset.c_str());
 	}
 	else {
-		setRandomPoint = false;
+		uavOffsetMovement = 10;
 	}
 
 	//DEBUG PRINT
@@ -303,8 +332,20 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 			<< "; relay:" << eRELAY
 			<< "; recording:" << eRECORDING
 			<< "; rel-rec:" << eRECORDINGRELAY
-			<< "; recharge:" << eRECHARGING
+			<< "; recharge_bus:" << eRECHARGING_BUS
+			<< "; recharge_home:" << eRECHARGING_HOME
 			<< endl;
+}
+
+double Simulator::getEnergyLossUav(double load) {
+	//TODO
+	if (load == 0) {
+		return eFLYING_FREE;
+	}
+	else {
+		double multiplier = 1.0 + (load / 3000.0);
+		return (eFLYING_FREE * multiplier);
+	}
 }
 
 bool Simulator::importStops(std::string stopsFileName) {
@@ -850,24 +891,35 @@ unsigned int Simulator::countNeighStopLanLon(double lan, double lon) {
 	return ris;
 }*/
 
-void Simulator::updateBatteries(Uav *u) {
+void Simulator::updateBatteries(Uav *u, unsigned int time_step) {
 	Uav::UAV_STATE us;
 
 	us = u->getState();
 
 	switch (us) {
+	case Uav::UAV_FLYING:
+		if (u->isCarryingPackage()) {
+			u->addEnergy(getEnergyLossUav(packageWeight), time_step);
+		}
+		else {
+			u->addEnergy(getEnergyLossUav(0), time_step);
+		}
+		break;
+	}
+
+	/*switch (us) {
 		case Uav::UAV_ONBUS:
-			u->addEnergy(eRECHARGING);
+			u->addEnergy(eRECHARGING_BUS, time_step);
 			u->addTimeOnBus(1);
 			break;
 
 		case Uav::UAV_FLYING:
 		default:
-			u->addEnergy(eSTOP);
+			u->addEnergy(eSTOP, time_step);
 			u->addTimeInStop(1);
 
 			break;
-		/*
+
 		case Uav::UAV_FLYING:
 		default:
 			if (u->isCovering()) {
@@ -893,8 +945,8 @@ void Simulator::updateBatteries(Uav *u) {
 			}
 
 			break;
-		*/
-	}
+
+	}*/
 }
 
 void Simulator::generateBothFlyArc(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id, double s_lat, double s_lon,
@@ -940,13 +992,13 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 	cout << "START GENERATING GRAPH NODES" << endl;
 
 	for (auto& st : stopsMap) {
-		flowGraph->addInitStop(st.second.getStopIdNum(), act_time);
+		flowGraph->addInitStop(&st.second, st.second.getStopIdNum(), act_time);
 	}
 	for (auto& ho : homesMap) {
-		flowGraph->addInitHome(ho.second.getHomeIdNum(), act_time);
+		flowGraph->addInitHome(&ho.second, ho.second.getHomeIdNum(), act_time);
 	}
 	for (auto& dp : deliveryPointsMap) {
-		flowGraph->addInitDeliveryPoint(dp.second.getDpIdNum(), act_time);
+		flowGraph->addInitDeliveryPoint(&dp.second, dp.second.getDpIdNum(), act_time);
 	}
 
 	act_time.tm_sec = act_time.tm_sec + 1;
@@ -956,18 +1008,19 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 		//struct std::tm before_time = act_time;
 
 		for (auto& st : stopsMap) {
-			flowGraph->addFollowingStop(st.second.getStopIdNum(), act_time);
+			flowGraph->addFollowingStop(&st.second, st.second.getStopIdNum(), act_time);
 			flowGraph->generateStaticArcsStop(st.second.getStopIdNum(), before_time, act_time, ArcGraph::STOP);
 		}
 		for (auto& hh : homesMap) {
-			flowGraph->addFollowingHome(hh.second.getHomeIdNum(), act_time);
+			flowGraph->addFollowingHome(&hh.second, hh.second.getHomeIdNum(), act_time);
 			flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::STOP);
-			for (int ii = 0; ii < hh.second.getHomeChargNum(); ++ii) {
+			/*for (unsigned int ii = 0; ii < hh.second.getHomeChargNum(); ++ii) {
 				flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::RECHARGE_HOME);
-			}
+			}*/
 		}
 		for (auto& dp : deliveryPointsMap) {
-			flowGraph->addFollowingDeliveryPoint(dp.second.getDpIdNum(), act_time);
+			flowGraph->addFollowingDeliveryPoint(&dp.second, dp.second.getDpIdNum(), act_time);
+			flowGraph->generateStaticArcsDeliveryPoint(dp.second.getDpIdNum(), before_time, act_time, ArcGraph::STOP);
 		}
 
 		/*for (auto& poi : poiMap) {
@@ -1002,7 +1055,7 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 	cout << endl << "END GENERATING GRAPH NODES" << endl; fflush(stdout);
 
 	//flowGraph.generateStaticArcs();
-	double packageW = 1; //TODO
+	double packageW = packageWeight; //TODO
 	cout << "START GENERATING UAV_MOVEMENT ARCS" << endl; fflush(stdout);
 	act_time = start_time;
 	mktime(&act_time);
@@ -1066,7 +1119,7 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 
 		fprintf(stdout, "\rGenerating graph nodes %.03f%%", (100.0 - ((((double) difftime(mktime(&end_time), mktime(&act_time))) / totSimTime) * 100.0)));fflush(stdout);
 		//cout << endl;
-		act_time.tm_sec = act_time.tm_sec + 30;  //TODO parametric
+		act_time.tm_sec = act_time.tm_sec + uavOffsetMovement;
 		mktime(&act_time);
 	}
 	cout << endl << "END GENERATING UAV_MOVEMENT ARCS" << endl; fflush(stdout);
@@ -1102,13 +1155,16 @@ bool Simulator::init(void) {
 		//listUav.push_back(newUav);
 		Uav *newUav = new Uav(this);
 
+		/*
+		// NO BATTERY.. WE ASSUME TO INIT THE UAV TO AN HOME WITH AVAILABLE BATTERIES
 		Battery *bat = new Battery();
 		bat->setMaxEnergy(maxUavEnergy);
 		bat->setResudualEnergy(initialUavEnergy);
 		bat->setState(Battery::BATTERY_SELFDISCHARGING);
+		newUav->setBatt(bat);
+		*/
 
 		newUav->setAverageSpeed(uavAvgSpeed);
-		newUav->setBatt(bat);
 
 		newUav->setState(Uav::UAV_WAIT_HOME);
 
@@ -1206,6 +1262,14 @@ bool Simulator::init(void) {
 		// Put the UAVs on the Flow Graph
 	}
 	*/
+
+
+	// init the homes
+	for (auto& h : homesMap) {
+		h.second.initWA(deliveryPointsMap);
+		h.second.initBM(maxUavEnergy, eRECHARGING_HOME);
+	}
+
 	cout << "END SETTING THE UAVs" << endl; fflush(stdout);
 
 	return ris;
@@ -1215,7 +1279,8 @@ void Simulator::run(void) {
 	char buffer[64];
 	unsigned int t = 0;
 	struct std::tm t_tm = start_sim_time_tm;
-	bool alive = true;
+	//bool alive = true;
+	unsigned int time_step_sec = 1;
 
 	do {
 	//for (unsigned int t = 0; t < maxTime; t++){
@@ -1224,27 +1289,33 @@ void Simulator::run(void) {
 		std::strftime(buffer, sizeof(buffer), " %a, %d.%m.%Y %H:%M:%S", &t_tm);
 		fprintf(stdout, "\rSimulation time: %u seconds - %s", t, buffer);fflush(stdout);
 
+		//update the homes
+		for (auto& h : homesMap) {
+			h.second.update(t_tm);
+		}
+
 		//flowGraph.execute(t, listUav);
 		flowGraph->execute(t_tm, listUav);
 
 		//updateThe batteries
 		for(auto& uav : listUav) {
-			updateBatteries(uav);
+			updateBatteries(uav, time_step_sec);
 		}
 
 		// check the lifetime
-		for(auto& uav : listUav) {
-			if (uav->getResudualEnergy() <= 0) {
-				alive = false;
-				break;
-			}
-		}
+		//for(auto& uav : listUav) {
+		//	if (uav->getResudualEnergy() <= 0) {
+		//		alive = false;
+		//		break;
+		//	}
+		//}
 
 		t++;
-		t_tm.tm_sec = t_tm.tm_sec + 1;
+		t_tm.tm_sec = t_tm.tm_sec + time_step_sec;
 		mktime(&t_tm);
 	//} while ((t < maxTime) && alive);
-	} while ((difftime(mktime(&end_sim_time_tm), mktime(&t_tm)) >= 0) && alive);
+	//} while ((difftime(mktime(&end_sim_time_tm), mktime(&t_tm)) >= 0) && alive);
+	} while (difftime(mktime(&end_sim_time_tm), mktime(&t_tm)) >= 0);
 	cout << endl;
 
 	finalLifetime = t;
@@ -1279,28 +1350,34 @@ void Simulator::stats(std::string outFileName) {
 	}
 	sumALL = sumStop + sumBus;
 
-	cout << "UAVs LIFESTYLE: "
-			<< "Stop " << (sumStop / sumALL) * 100.0 << "%; "
-			<< "Bus " << (sumBus / sumALL) * 100.0 << "%; "
-			<< endl;
+	if (sumALL > 0) {
 
-	if (fOutOK) statStream << "UAV_LIFESTYLE "
-			<< "Stop " << (sumStop / sumALL) * 100.0 << " "
-			<< "Bus " << (sumBus / sumALL) * 100.0 << " "
-			<< endl;
+		cout << "UAVs LIFESTYLE: "
+				<< "Stop " << (sumStop / sumALL) * 100.0 << "%; "
+				<< "Bus " << (sumBus / sumALL) * 100.0 << "%; "
+				<< endl;
+
+		if (fOutOK) statStream << "UAV_LIFESTYLE "
+				<< "Stop " << (sumStop / sumALL) * 100.0 << " "
+				<< "Bus " << (sumBus / sumALL) * 100.0 << " "
+				<< endl;
+	}
 
 	for (auto& uav : listUav) {
 		double sumUavAll = uav->getTimeInStop() + uav->getTimeOnBus();
 
-		cout << "   UAV " << uav->getId() << " LIFESTYLE: "
-				<< "Stop " << ( ((double) uav->getTimeInStop()) / sumUavAll) * 100.0 << "%; "
-				<< "Bus " << (((double) uav->getTimeOnBus()) / sumUavAll) * 100.0 << "%; "
-				<< endl;
+		if (sumUavAll > 0) {
 
-		if (fOutOK) statStream << "UAV_N" << uav->getId() << "_LIFESTYLE: "
-						<< "Stop " << ( ((double) uav->getTimeInStop()) / sumUavAll) * 100.0 << " "
-						<< "Bus " << (((double) uav->getTimeOnBus()) / sumUavAll) * 100.0 << " "
-						<< endl;
+			cout << "   UAV " << uav->getId() << " LIFESTYLE: "
+					<< "Stop " << ( ((double) uav->getTimeInStop()) / sumUavAll) * 100.0 << "%; "
+					<< "Bus " << (((double) uav->getTimeOnBus()) / sumUavAll) * 100.0 << "%; "
+					<< endl;
+
+			if (fOutOK) statStream << "UAV_N" << uav->getId() << "_LIFESTYLE: "
+					<< "Stop " << ( ((double) uav->getTimeInStop()) / sumUavAll) * 100.0 << " "
+					<< "Bus " << (((double) uav->getTimeOnBus()) / sumUavAll) * 100.0 << " "
+					<< endl;
+		}
 	}
 
 	double avgResidualEnergy, maxResidualEnergy, sumResidualEnergy;
