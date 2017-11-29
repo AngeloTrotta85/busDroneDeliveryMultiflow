@@ -50,6 +50,9 @@ public:
 	void setState(UAV_STATE state) {		this->state = state;	}
 	double getAverageSpeed() const {		return averageSpeed;	}
 	void setAverageSpeed(double averageSpeed) {		this->averageSpeed = averageSpeed;	}
+	unsigned int getDeliveredPackage() const {		return deliveredPackage;	}
+	void setDeliveredPackage(unsigned int deliveredPackage) {		this->deliveredPackage = deliveredPackage;	}
+	void addDeliveredPackage(unsigned int deliveredPackageNumber){		this->deliveredPackage += deliveredPackageNumber;	}
 	int getId() const {		return id;	}
 	Home* getBelongingHome()  {		return belongingHome;	}
 	void setBelongingHome(Home* belongingHome) {		this->belongingHome = belongingHome;	}
@@ -134,6 +137,7 @@ private:
 	ArcGraph *actual_arch;
 	int id;
 	double averageSpeed;
+	unsigned int deliveredPackage;
 
 	unsigned int timeInStop;
 	unsigned int timeOnBus;

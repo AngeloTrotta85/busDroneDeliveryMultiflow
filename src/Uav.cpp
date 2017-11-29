@@ -23,6 +23,7 @@ Uav::Uav(Simulator *sim) {
 	batt = nullptr;
 	carryingPackage = nullptr;
 	averageSpeed = 10;
+	deliveredPackage = 0;
 
 	pos_lon = 0;
 	pos_lat = 0;
@@ -39,7 +40,7 @@ double Uav::getResudualEnergy()  {
 		return batt->getResudualEnergy();
 	}
 	else {
-		return 0;
+		return -1;
 	}
 }
 

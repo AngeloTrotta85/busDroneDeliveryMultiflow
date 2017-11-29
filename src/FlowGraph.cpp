@@ -266,7 +266,10 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 						u->setState(Uav::UAV_WAIT_DP);	// I reached the delivery point
 
 						deliveredP = u->removeCarryingPackage();
-						a->dest->dp_ptr->manageArrivedPackage(deliveredP);
+						if (deliveredP != nullptr) {
+							a->dest->dp_ptr->manageArrivedPackage(deliveredP);
+							u->addDeliveredPackage(1);
+						}
 
 						u->setPosLat(a->dest->dp_ptr->getDpLatNum());
 						u->setPosLon(a->dest->dp_ptr->getDpLonNum());
@@ -738,6 +741,8 @@ void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
 				u->setState(Uav::UAV_FLYING);
 				u->setActualArch(aToUse_inDP);
 				//cout << "UAV " << u->getId() << " Path to home found" << endl;
+				//cout << endl << "UAV " << u->getId() << " path found from [DP:" << aToUse_inDP->src->node_id << ":" << aToUse_inDP->src->time <<
+				//				"] -> [HOME:" << aToUse_inDP->dest->node_id << ":" << aToUse_inDP->dest->time << "]" << endl;
 			}
 			else {
 				// I didn't find a direct graph (there is not a fly arch for each node).. so I wait here
@@ -805,6 +810,8 @@ void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
 					u->setState(Uav::UAV_FLYING);
 					u->setActualArch(aToUse);
 					//cout << "UAV " << u->getId() << " path found" << endl;
+					//cout << endl << "UAV " << u->getId() << " path found from [HOME:" << aToUse->src->node_id << ":" << aToUse->src->time <<
+					//		"] -> [DP:" << aToUse->dest->node_id << ":" << aToUse->dest->time << "]" << endl;
 				}
 				else {
 					// I didn't find a direct graph (there is not a fly arch for each node).. so I wait here

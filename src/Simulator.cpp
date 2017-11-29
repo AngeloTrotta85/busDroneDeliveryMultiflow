@@ -1286,8 +1286,23 @@ void Simulator::run(void) {
 	//for (unsigned int t = 0; t < maxTime; t++){
 		//cout << "Simulation time: " << t << endl;
 
-		std::strftime(buffer, sizeof(buffer), " %a, %d.%m.%Y %H:%M:%S", &t_tm);
-		fprintf(stdout, "\rSimulation time: %u seconds - %s", t, buffer);fflush(stdout);
+		//std::strftime(buffer, sizeof(buffer), " %a, %d.%m.%Y %H:%M:%S", &t_tm);
+		//fprintf(stdout, "\rSimulation time: %u seconds - %s", t, buffer);fflush(stdout);
+		std::strftime(buffer, sizeof(buffer), "%a, %d.%m.%Y %H:%M:%S", &t_tm);
+		fprintf(stdout, "\rSimulation time: %05u s; %s; ", t, buffer);
+		for (auto& h : homesMap) {
+			//fprintf(stdout, "{wa%d|%d} ", h.second.getHomeIdNum(), h.second.getWA_pktNumber());
+			fprintf(stdout, "{wa%d|p%d", h.second.getHomeIdNum(), h.second.getWA_pktNumber());
+			h.second.bm.printBatteriesState();
+			fprintf(stdout, "}");
+		}
+		cout << "; ";
+		for (auto& uav : listUav) {
+			fprintf(stdout, "[%d|%.01f|P%d]", uav->getId(), uav->getResudualEnergy(), uav->getDeliveredPackage());
+		}
+		cout << " -!";
+		//cout << endl;
+		fflush(stdout);
 
 		//update the homes
 		for (auto& h : homesMap) {
