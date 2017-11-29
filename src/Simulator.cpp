@@ -896,15 +896,16 @@ void Simulator::updateBatteries(Uav *u, unsigned int time_step) {
 
 	us = u->getState();
 
-	switch (us) {
-	case Uav::UAV_FLYING:
+	//switch (us) {
+	//case Uav::UAV_FLYING:
+	if (us == Uav::UAV_FLYING) {
 		if (u->isCarryingPackage()) {
 			u->addEnergy(getEnergyLossUav(packageWeight), time_step);
 		}
 		else {
 			u->addEnergy(getEnergyLossUav(0), time_step);
 		}
-		break;
+		//break;
 	}
 
 	/*switch (us) {
@@ -1293,7 +1294,7 @@ void Simulator::run(void) {
 		for (auto& h : homesMap) {
 			//fprintf(stdout, "{wa%d|%d} ", h.second.getHomeIdNum(), h.second.getWA_pktNumber());
 			fprintf(stdout, "{wa%d|p%d", h.second.getHomeIdNum(), h.second.getWA_pktNumber());
-			h.second.bm.printBatteriesState();
+			h.second.bm->printBatteriesState();
 			fprintf(stdout, "}");
 		}
 		cout << "; ";

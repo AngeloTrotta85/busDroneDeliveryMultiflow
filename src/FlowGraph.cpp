@@ -256,7 +256,7 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 						// release the battery
 						battUAV = u->removeBatt();
 						if (battUAV != nullptr) {
-							a->dest->home_ptr->bm.addBattery(battUAV);
+							a->dest->home_ptr->bm->addBattery(battUAV);
 						}
 						u->setPosLat(a->dest->home_ptr->getHomeLatNum());
 						u->setPosLon(a->dest->home_ptr->getHomeLonNum());
@@ -764,19 +764,19 @@ void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
 			//cout << "UAV " << u->getId() << " bSTATE: " << u->getBatt() << " and pSTATE: " << u->getCarryingPackage() << endl;
 			if ((u->getBatt() == nullptr) && (u->getCarryingPackage() == nullptr)) {
 				//cout << "UAV " << u->getId() << " has no battery nor a package. Are there available package? " << waitingHome->wa.getWarehousePktNumber() << endl;
-				if (waitingHome->wa.getWarehousePktNumber() > 0) {
+				if (waitingHome->wa->getWarehousePktNumber() > 0) {
 					Package *pckToCarry = nullptr;
-					for (auto& b : waitingHome->bm.batteryList) {
+					for (auto& b : waitingHome->bm->batteryList) {
 						//for (auto& p : belongingHome->wa.wareHouse) {
-						for (auto itP = waitingHome->wa.wareHouse.begin(); itP != waitingHome->wa.wareHouse.end(); itP++) {
+						for (auto itP = waitingHome->wa->wareHouse.begin(); itP != waitingHome->wa->wareHouse.end(); itP++) {
 							if (check_pkt_feasibility(waitingHome->getHomeLatNum(), waitingHome->getHomeLonNum(), *itP, b)) {
 								pckToCarry = *itP;
-								waitingHome->wa.wareHouse.erase(itP);
+								waitingHome->wa->wareHouse.erase(itP);
 								break;
 							}
 						}
 						if (pckToCarry != nullptr) {
-							bToLoad = waitingHome->bm.popBattery(b->id_batt);
+							bToLoad = waitingHome->bm->popBattery(b->id_batt);
 							break;
 						}
 					}
@@ -823,8 +823,8 @@ void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
 							//cout << "UAV " << u->getId() << " NO path found... waiting here" << endl;
 
 							// relaase the package and the battery
-							waitingHome->bm.addBattery(u->removeBatt());
-							waitingHome->wa.addPackage(u->removeCarryingPackage());
+							waitingHome->bm->addBattery(u->removeBatt());
+							waitingHome->wa->addPackage(u->removeCarryingPackage());
 							break;
 						}
 					}

@@ -41,6 +41,9 @@ bool Home::parseInput(const std::string toParse) {
 			home_lon = t;
 			home_lon_num = atof(home_lon.c_str());
 			break;
+		case HOME_WA_TYPE:
+			home_wa_type = t;
+			break;
 		case HOME_WA_DEFWEIGHT:
 			tmp = t;
 			home_wa_defpkt_w = atof(tmp.c_str());
@@ -52,6 +55,9 @@ bool Home::parseInput(const std::string toParse) {
 		case HOME_WA_PKTGENRATE:
 			tmp = t;
 			home_wa_pkt_genrate = atof(tmp.c_str());
+			break;
+		case HOME_BATTERYMANAGER_TYPE:
+			home_bm_type = t;
 			break;
 		case HOME_CHARG_NUM:
 			tmp = t;
@@ -74,7 +80,7 @@ bool Home::parseInput(const std::string toParse) {
 		idx++;
 	}
 
-	if (idx != 10) {
+	if (idx != 12) {
 		ris = false;
 	}
 
@@ -84,23 +90,37 @@ bool Home::parseInput(const std::string toParse) {
 void Home::init(struct std::tm sim_time_tm) {
 
 	// warehouse initialization
-	wa.initTime(sim_time_tm);
+	if (home_wa_type.compare("standardWA") == 0) {
+		wa = new Warehouse();
+	}
+	else {
+		cerr << "Wrong warehouse: " << home_wa_type << endl;
+		exit(EXIT_FAILURE);
+	}
+	wa->initTime(sim_time_tm);
 
 	// battery manager initialization
-	bm.initTime(sim_time_tm);
+	if (home_bm_type.compare("standardBM") == 0) {
+		bm = new BatteriesManager();
+	}
+	else {
+		cerr << "Wrong battery manager: " << home_bm_type << endl;
+		exit(EXIT_FAILURE);
+	}
+	bm->initTime(sim_time_tm);
 
 }
 
 void Home::update(struct std::tm now_time_tm) {
 	// warehouse update
-	wa.update(now_time_tm, simulator->deliveryPointsMap);
+	wa->update(now_time_tm, simulator->deliveryPointsMap);
 
 	// battery manager update
-	bm.update(now_time_tm);
+	bm->update(now_time_tm);
 }
 
 unsigned int Home::getWA_pktNumber(void) {
-	return wa.getWarehousePktNumber();
+	return wa->getWarehousePktNumber();
 }
 
 /*void Home::setWA_parameters(double defW, int initPck, double genRate, std::map<unsigned int, DeliveryPoint> &dp) {
@@ -110,12 +130,12 @@ unsigned int Home::getWA_pktNumber(void) {
 }*/
 
 void Home::initWA(std::map<unsigned int, DeliveryPoint> &dp) {
-	wa.setPacketInitNumber(home_wa_pkt_initnum, dp);
+	wa->setPacketInitNumber(home_wa_pkt_initnum, dp);
 }
 
 void Home::initBM(double battMaxVal, double chargerPow) {
 
-	bm.init(home_charg_num, home_charg_batt_initnum, home_charg_batt_initval, battMaxVal, chargerPow);
+	bm->init(home_charg_num, home_charg_batt_initnum, home_charg_batt_initval, battMaxVal, chargerPow);
 
 }
 

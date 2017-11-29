@@ -33,9 +33,11 @@ public:
 		HOME_NAME,
 		HOME_LAT,
 		HOME_LON,
+		HOME_WA_TYPE,
 		HOME_WA_DEFWEIGHT,
 		HOME_WA_PKTINITNUM,
 		HOME_WA_PKTGENRATE,
+		HOME_BATTERYMANAGER_TYPE,
 		HOME_CHARG_NUM,
 		HOME_CHARG_BATTINITNUM,
 		HOME_CHARG_BATTINITVAL
@@ -71,8 +73,8 @@ public:
 	unsigned int getHomeWaPktInitnum() const {		return home_wa_pkt_initnum;	}
 
 public:
-	Warehouse wa;
-	BatteriesManager bm;
+	Warehouse *wa;
+	BatteriesManager *bm;
 
 private:
 	Simulator *simulator;
@@ -81,6 +83,9 @@ private:
 	std::string home_name;
 	std::string home_lat;
 	std::string home_lon;
+
+	std::string home_wa_type;
+	std::string home_bm_type;
 
 	unsigned int home_id_num;
 	double home_lat_num;
