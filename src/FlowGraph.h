@@ -24,37 +24,10 @@
 #include "Uav.h"
 //#include "Simulator.h"
 
-class NodeGraph;
+//class NodeGraph;
 class Simulator;
+class ArcGraph;
 
-class ArcGraph {
-public:
-	typedef enum {
-		STOP,
-		COVER,
-		BUS,
-		FLY_EMPTY,
-		FLY_WITH_PACKAGE,
-		RECHARGE_HOME
-	} ARC_TYPE;
-public:
-	ArcGraph(){
-		src = nullptr;
-		dest = nullptr;
-		batt = nullptr;
-		arc_t = STOP;
-		reserved = false;
-	};
-	virtual ~ArcGraph(){ };
-
-public:
-	NodeGraph *src;
-	NodeGraph *dest;
-	ARC_TYPE arc_t;
-	std::list<Uav *> uavOnTheArc;
-	Battery *batt;
-	bool reserved;
-};
 
 class NodeGraph {
 public:
@@ -118,6 +91,54 @@ public:
 	ArcGraph *predecessor_arc;
 };
 
+class ArcGraph {
+public:
+	typedef enum {
+		STOP,
+		BUS,
+		FLY_EMPTY,
+		FLY_WITH_PACKAGE,
+		RECHARGE_HOME
+	} ARC_TYPE;
+public:
+	ArcGraph(){
+		src = nullptr;
+		dest = nullptr;
+		batt = nullptr;
+		arc_t = STOP;
+		reserved = false;
+		energyCost_watt = 0;
+	};
+	virtual ~ArcGraph(){ };
+
+	double getEnergyCost(double w = 0) {
+		double ris = 0;
+		if ((src != nullptr) && (dest != nullptr)) {
+			if (energyCost_watt > 0) {	// recharging arcs (not w dependent)
+				ris = energyCost_watt * (dest->time - src->time);
+			}
+			else if (energyCost_watt < 0){	// flying arcs (w dependent)
+				//TODO sincronizzarsi con Simulator::getEnergyLossUav
+				double multiplier = 1.0 + (w / 3000.0);
+				ris = (energyCost_watt * multiplier) * (dest->time - src->time);
+			}
+			else {	// Home static arc
+				ris = 0;
+			}
+		}
+		return ris;
+	}
+
+public:
+	NodeGraph *src;
+	NodeGraph *dest;
+	ARC_TYPE arc_t;
+	std::list<Uav *> uavOnTheArc;
+	Battery *batt;
+	bool reserved;
+	double energyCost_watt;
+};
+
 class FlowGraph {
 public:
 	FlowGraph(Simulator *s);
@@ -149,9 +170,7 @@ public:
 	bool exportDotResult(std::string dotFileName);
 	bool exportDotFullEmptyGraph(std::string dotFileName);
 
-	void getMinimumPathAll(std::map<unsigned int, std::list<ArcGraph *> > &arcMapList, unsigned int stopStart, unsigned int timeStart);
-	void getMinimumPathFromAll(std::list<ArcGraph *> &arcList, unsigned int stopStart, unsigned int timeStart, unsigned int stopEnd);
-	void getMinimumPathToFew(std::map<unsigned int, std::list<ArcGraph *> > &arcMapList, std::map<unsigned int, unsigned int > &arcMapListCost, unsigned int stopStart, unsigned int timeStart, std::vector<Stops *> &stopsEnd);
+	void getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd);
 
 	bool check_pkt_feasibility(double s_lat, double s_lon, Package *p, Battery *b);
 
@@ -169,7 +188,7 @@ public:
 
 	unsigned int getSwapCount() const {		return swapCount;	}
 
-protected:
+public:
 	//std::map<unsigned int, std::map<unsigned int, NodeGraph *> > graphMapMap;
 	std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::map<unsigned int, NodeGraph *> > > graphMapMapMap;
 	//std::map<unsigned int, std::vector<NodeGraph *> > graphMapVec;

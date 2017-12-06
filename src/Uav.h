@@ -121,11 +121,12 @@ public:
 		return speedUAV;
 	}
 
-	static int getFlyTime_sec(double s_lat, double s_lon, double a_lat, double a_lon, double baseSpeed, double w) {
+	static double getFlyTime_sec(double s_lat, double s_lon, double a_lat, double a_lon, double baseSpeed, double w) {
 		double dist = distanceEarth(s_lat, s_lon, a_lat, a_lon);
 		double speedUAV = getSpeedWithLoad(baseSpeed, w);
 
-		return ((int) dist / speedUAV);
+		//return ((int) ((dist / speedUAV) + 0.5));
+		return (dist / speedUAV);
 	}
 
 private:

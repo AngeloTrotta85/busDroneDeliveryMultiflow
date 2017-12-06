@@ -338,7 +338,7 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 }
 
 double Simulator::getEnergyLossUav(double load) {
-	//TODO
+	//TODO sincronizzarsi con ArcGraph::getEnergyCost
 	if (load == 0) {
 		return eFLYING_FREE;
 	}
@@ -956,13 +956,16 @@ void Simulator::generateBothFlyArc(struct std::tm s_time, NodeGraph::NODE_TYPE s
 	struct std::tm arrival_time;
 	//ArcGraph::ARC_TYPE at = (w > 0) ? ArcGraph::FLY_WITH_PACKAGE : ArcGraph::FLY_EMPTY;
 
-	flytime = Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, 0);
+	flytime = ((int) (Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, 0) + 0.5));
+	if (flytime <= 0) flytime = 1;
 	arrival_time = s_time;
 	arrival_time.tm_sec = arrival_time.tm_sec + flytime;
 	mktime(&arrival_time);
 	flowGraph->generateFlyArcs(s_time, s_type, s_id, arrival_time, a_type, a_id, ArcGraph::FLY_EMPTY);
 
-	flytime = Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, w);
+	//flytime = Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, w);
+	flytime = ((int) (Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, w) + 0.5));
+	if (flytime <= 0) flytime = 1;
 	arrival_time = s_time;
 	arrival_time.tm_sec = arrival_time.tm_sec + flytime;
 	mktime(&arrival_time);
@@ -1282,6 +1285,32 @@ void Simulator::run(void) {
 	struct std::tm t_tm = start_sim_time_tm;
 	//bool alive = true;
 	unsigned int time_step_sec = 1;
+
+
+	{	// TEST the getMinimumPathToFew
+		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > arcMapList;
+		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > arcMapListCost;
+
+		std::vector<NodeGraph *> nodesEnd;
+		NodeGraph *nodeStart;
+
+		//nodeStart = flowGraph->graphMapMapMap[NodeGraph::HOME].begin()->second.begin()->second;
+		auto ff = flowGraph->graphMapMapMap[NodeGraph::HOME].begin()->second.begin();
+		ff++;
+		nodeStart = ff->second;
+
+		for (auto& t : flowGraph->graphMapMapMap) {
+			if (t.first != NodeGraph::HOME) {
+				for (auto& id : t.second) {
+					nodesEnd.push_back(id.second.begin()->second);
+				}
+			}
+		}
+
+		flowGraph->getMinimumPathToFew(arcMapList, arcMapListCost, nodeStart, nodesEnd);
+
+		exit(EXIT_SUCCESS);
+	}
 
 	do {
 	//for (unsigned int t = 0; t < maxTime; t++){
