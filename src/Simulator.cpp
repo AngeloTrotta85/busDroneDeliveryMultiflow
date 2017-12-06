@@ -1287,7 +1287,7 @@ void Simulator::run(void) {
 	unsigned int time_step_sec = 1;
 
 
-	{	// TEST the getMinimumPathToFew
+	/*{	// TEST the getMinimumPathToFew
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > arcMapList;
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > arcMapListCost;
 
@@ -1310,7 +1310,7 @@ void Simulator::run(void) {
 		flowGraph->getMinimumPathToFew(arcMapList, arcMapListCost, nodeStart, nodesEnd);
 
 		exit(EXIT_SUCCESS);
-	}
+	}*/
 
 	do {
 	//for (unsigned int t = 0; t < maxTime; t++){
