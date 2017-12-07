@@ -770,6 +770,7 @@ void FlowGraph::getMinimumPathOnlyFly_GoAndBack(std::list<ArcGraph *> &arcList,
 				}
 				else if (a->arc_t == ArcGraph::STOP) {
 					nextArch = a;
+
 				}
 			}
 			if (nextArch == nullptr) {
