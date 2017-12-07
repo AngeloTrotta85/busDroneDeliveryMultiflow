@@ -113,7 +113,7 @@ public:
 	};
 	virtual ~ArcGraph(){ };
 
-	double getEnergyCost(double w = 0) {
+	/*double getEnergyCost(double w = 0) {
 		double ris = 0;
 		if ((src != nullptr) && (dest != nullptr)) {
 			if (energyCost_watt > 0) {	// recharging arcs (not w dependent)
@@ -127,6 +127,14 @@ public:
 			else {	// Home static arc
 				ris = 0;
 			}
+		}
+		return ris;
+	}*/
+
+	double getEnergyCost() {
+		double ris = 0;
+		if ((src != nullptr) && (dest != nullptr)) {
+			ris = energyCost_watt * (dest->time - src->time);
 		}
 		return ris;
 	}
@@ -154,11 +162,11 @@ public:
 	void addFollowingStop(Stops *st_ptr, unsigned int stop, struct std::tm time);
 	void addFollowingHome(Home *h_ptr, unsigned int home, struct std::tm time);
 	void addFollowingDeliveryPoint(DeliveryPoint *dp_ptr, unsigned int dp, struct std::tm time);
-	void generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
-	void generateStaticArcsHome(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
-	void generateStaticArcsDeliveryPoint(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE);
-	void generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd);
-	void generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id, struct std::tm a_time, NodeGraph::NODE_TYPE a_type, unsigned int a_id, ArcGraph::ARC_TYPE at);
+	void generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE, double w_cost);
+	void generateStaticArcsHome(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE, double w_cost);
+	void generateStaticArcsDeliveryPoint(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE, double w_cost);
+	void generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd, double w_cost);
+	void generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id, struct std::tm a_time, NodeGraph::NODE_TYPE a_type, unsigned int a_id, ArcGraph::ARC_TYPE at, double w_cost);
 
 	NodeGraph *getNodePtr(NodeGraph::NODE_TYPE n_type, unsigned int id, struct std::tm time_tm);
 
@@ -173,7 +181,8 @@ public:
 	bool exportDotFullEmptyGraph(std::string dotFileName);
 
 	void getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd);
-	void getMinimumPathToFew_limitedEnergy(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd, double energy);
+	void getMinimumPathToFew_withEnergy(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, double > > &arcMapListEnergyCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd);
+	void getMinimumPathOnlyFly_GoAndBack(std::list<ArcGraph *> &arcList, unsigned int &arcListTimeCost, double &arcListEnergyCost, Home *homeStart, unsigned int timeStart, DeliveryPoint *dp);
 
 	bool check_pkt_feasibility(double s_lat, double s_lon, Package *p, Battery *b);
 

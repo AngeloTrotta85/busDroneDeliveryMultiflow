@@ -961,7 +961,7 @@ void Simulator::generateBothFlyArc(struct std::tm s_time, NodeGraph::NODE_TYPE s
 	arrival_time = s_time;
 	arrival_time.tm_sec = arrival_time.tm_sec + flytime;
 	mktime(&arrival_time);
-	flowGraph->generateFlyArcs(s_time, s_type, s_id, arrival_time, a_type, a_id, ArcGraph::FLY_EMPTY);
+	flowGraph->generateFlyArcs(s_time, s_type, s_id, arrival_time, a_type, a_id, ArcGraph::FLY_EMPTY, getEnergyLossUav(0));
 
 	//flytime = Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, w);
 	flytime = ((int) (Uav::getFlyTime_sec(s_lat, s_lon, a_lat, a_lon, uavAvgSpeed, w) + 0.5));
@@ -969,7 +969,7 @@ void Simulator::generateBothFlyArc(struct std::tm s_time, NodeGraph::NODE_TYPE s
 	arrival_time = s_time;
 	arrival_time.tm_sec = arrival_time.tm_sec + flytime;
 	mktime(&arrival_time);
-	flowGraph->generateFlyArcs(s_time, s_type, s_id, arrival_time, a_type, a_id, ArcGraph::FLY_WITH_PACKAGE);
+	flowGraph->generateFlyArcs(s_time, s_type, s_id, arrival_time, a_type, a_id, ArcGraph::FLY_WITH_PACKAGE, getEnergyLossUav(w));
 
 }
 
@@ -1013,18 +1013,18 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 
 		for (auto& st : stopsMap) {
 			flowGraph->addFollowingStop(&st.second, st.second.getStopIdNum(), act_time);
-			flowGraph->generateStaticArcsStop(st.second.getStopIdNum(), before_time, act_time, ArcGraph::STOP);
+			flowGraph->generateStaticArcsStop(st.second.getStopIdNum(), before_time, act_time, ArcGraph::STOP, eSTOP);
 		}
 		for (auto& hh : homesMap) {
 			flowGraph->addFollowingHome(&hh.second, hh.second.getHomeIdNum(), act_time);
-			flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::STOP);
+			flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::STOP, 0);
 			/*for (unsigned int ii = 0; ii < hh.second.getHomeChargNum(); ++ii) {
 				flowGraph->generateStaticArcsHome(hh.second.getHomeIdNum(), before_time, act_time, ArcGraph::RECHARGE_HOME);
 			}*/
 		}
 		for (auto& dp : deliveryPointsMap) {
 			flowGraph->addFollowingDeliveryPoint(&dp.second, dp.second.getDpIdNum(), act_time);
-			flowGraph->generateStaticArcsDeliveryPoint(dp.second.getDpIdNum(), before_time, act_time, ArcGraph::STOP);
+			flowGraph->generateStaticArcsDeliveryPoint(dp.second.getDpIdNum(), before_time, act_time, ArcGraph::STOP, eSTOP);
 		}
 
 		/*for (auto& poi : poiMap) {
@@ -1132,7 +1132,7 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 	int c = 0;
 	for (auto& r : busRouteMap) {
 		BusRoute *br = &(r.second);
-		flowGraph->generateStaticArcsFromRoute(br, start_time, end_time);
+		flowGraph->generateStaticArcsFromRoute(br, start_time, end_time, eRECHARGING_BUS);
 
 		c++;
 		fprintf(stdout, "\rGenerating buses arcs %.03f%%", (((double) c) / ((double) busRouteMap.size())) * 100.0);
@@ -1287,9 +1287,14 @@ void Simulator::run(void) {
 	unsigned int time_step_sec = 1;
 
 
-	/*{	// TEST the getMinimumPathToFew
+	{	// TEST the getMinimumPathToFew
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > arcMapList;
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > arcMapListCost;
+		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, double > > arcMapListECost;
+
+		std::list<ArcGraph *> arcList;
+		unsigned int arcListCost;
+		double arcListECost;
 
 		std::vector<NodeGraph *> nodesEnd;
 		NodeGraph *nodeStart;
@@ -1307,10 +1312,16 @@ void Simulator::run(void) {
 			}
 		}
 
-		flowGraph->getMinimumPathToFew(arcMapList, arcMapListCost, nodeStart, nodesEnd);
+		//flowGraph->getMinimumPathToFew(arcMapList, arcMapListCost, nodeStart, nodesEnd);
+		//flowGraph->getMinimumPathToFew_withEnergy(arcMapList, arcMapListCost, arcMapListECost, nodeStart, nodesEnd);
+
+		for (auto& ddd : flowGraph->graphMapMapMap[NodeGraph::DELIVERY_POINT]) {
+			DeliveryPoint *dpp = ddd.second.begin()->second->dp_ptr;
+			flowGraph->getMinimumPathOnlyFly_GoAndBack(arcList, arcListCost, arcListECost, nodeStart->home_ptr, nodeStart->time, dpp);
+		}
 
 		exit(EXIT_SUCCESS);
-	}*/
+	}
 
 	do {
 	//for (unsigned int t = 0; t < maxTime; t++){

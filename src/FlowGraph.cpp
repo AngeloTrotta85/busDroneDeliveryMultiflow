@@ -108,40 +108,43 @@ void FlowGraph::addFollowingDeliveryPoint(DeliveryPoint *dp_ptr, unsigned int dp
 }
 
 
-void FlowGraph::generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at) {
+void FlowGraph::generateStaticArcsStop(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at, double w_cost) {
 	if ((graphMapMapMap.count(NodeGraph::STOP) > 0) && (graphMapMapMap[NodeGraph::STOP].count(id) > 0)) {
 
 		ArcGraph *newArcStop = new ArcGraph();
 		newArcStop->arc_t = at;
+		newArcStop->energyCost_watt = w_cost;
 		newArcStop->src = graphMapMapMap[NodeGraph::STOP][id][day_tm2seconds(time1)];
 		newArcStop->dest = graphMapMapMap[NodeGraph::STOP][id][day_tm2seconds(time2)];
 		graphMapMapMap[NodeGraph::STOP][id][day_tm2seconds(time1)]->arcs.push_back(newArcStop);
 	}
 }
 
-void FlowGraph::generateStaticArcsHome(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at) {
+void FlowGraph::generateStaticArcsHome(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at, double w_cost) {
 	if ((graphMapMapMap.count(NodeGraph::HOME) > 0) && (graphMapMapMap[NodeGraph::HOME].count(id) > 0)) {
 
 		ArcGraph *newArcStop = new ArcGraph();
 		newArcStop->arc_t = at;
+		newArcStop->energyCost_watt = w_cost;
 		newArcStop->src = graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time1)];
 		newArcStop->dest = graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time2)];
 		graphMapMapMap[NodeGraph::HOME][id][day_tm2seconds(time1)]->arcs.push_back(newArcStop);
 	}
 }
 
-void FlowGraph::generateStaticArcsDeliveryPoint(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at) {
+void FlowGraph::generateStaticArcsDeliveryPoint(unsigned int id, struct std::tm time1, struct std::tm time2, ArcGraph::ARC_TYPE at, double w_cost) {
 	if ((graphMapMapMap.count(NodeGraph::DELIVERY_POINT) > 0) && (graphMapMapMap[NodeGraph::DELIVERY_POINT].count(id) > 0)) {
 
 		ArcGraph *newArcStop = new ArcGraph();
 		newArcStop->arc_t = at;
+		newArcStop->energyCost_watt = w_cost;
 		newArcStop->src = graphMapMapMap[NodeGraph::DELIVERY_POINT][id][day_tm2seconds(time1)];
 		newArcStop->dest = graphMapMapMap[NodeGraph::DELIVERY_POINT][id][day_tm2seconds(time2)];
 		graphMapMapMap[NodeGraph::DELIVERY_POINT][id][day_tm2seconds(time1)]->arcs.push_back(newArcStop);
 	}
 }
 
-void FlowGraph::generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd) {
+void FlowGraph::generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBegin, struct std::tm timeEnd, double w_cost) {
 	unsigned int nodeStart, nodeDest;
 	unsigned int timeStart, timeDest;
 	auto it = br->orderedList_Stops.begin();
@@ -164,6 +167,7 @@ void FlowGraph::generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBeg
 					ArcGraph *newArcStop = new ArcGraph();
 
 					newArcStop->arc_t = ArcGraph::BUS;
+					newArcStop->energyCost_watt = w_cost;
 					newArcStop->src = graphMapMapMap[NodeGraph::STOP][nodeStart][timeStart];
 					newArcStop->dest = graphMapMapMap[NodeGraph::STOP][nodeDest][timeDest];
 
@@ -179,12 +183,13 @@ void FlowGraph::generateStaticArcsFromRoute(BusRoute *br, struct std::tm timeBeg
 }
 
 void FlowGraph::generateFlyArcs(struct std::tm s_time, NodeGraph::NODE_TYPE s_type, unsigned int s_id,
-		struct std::tm a_time, NodeGraph::NODE_TYPE a_type, unsigned int a_id, ArcGraph::ARC_TYPE at) {
+		struct std::tm a_time, NodeGraph::NODE_TYPE a_type, unsigned int a_id, ArcGraph::ARC_TYPE at, double w_cost) {
 	if (((graphMapMapMap.count(s_type) > 0) && (graphMapMapMap[s_type].count(s_id) > 0) && (graphMapMapMap[s_type][s_id].count(day_tm2seconds(s_time)) > 0)) &&
 			((graphMapMapMap.count(a_type) > 0) && (graphMapMapMap[a_type].count(a_id) > 0) && (graphMapMapMap[a_type][a_id].count(day_tm2seconds(a_time)) > 0)) ){
 
 		ArcGraph *newArcStop = new ArcGraph();
 		newArcStop->arc_t = at;
+		newArcStop->energyCost_watt = w_cost;
 		newArcStop->src = graphMapMapMap[s_type][s_id][day_tm2seconds(s_time)];
 		newArcStop->dest = graphMapMapMap[a_type][a_id][day_tm2seconds(a_time)];
 		graphMapMapMap[s_type][s_id][day_tm2seconds(s_time)]->arcs.push_back(newArcStop);
@@ -513,7 +518,10 @@ void FlowGraph::getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsi
 	}
 }
 
-void FlowGraph::getMinimumPathToFew_limitedEnergy(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd, double energy) {
+void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList,
+		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost,
+		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, double > > &arcMapListEnergyCost,
+		NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd) {
 	std::list<NodeGraph *> q;
 	std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, NodeGraph *> > minimumTimeMap;
 
@@ -531,6 +539,11 @@ void FlowGraph::getMinimumPathToFew_limitedEnergy(std::map<NodeGraph::NODE_TYPE,
 	}
 	arcMapListCost.clear();
 
+	for (auto& l : arcMapListEnergyCost) {
+		l.second.clear();
+	}
+	arcMapListEnergyCost.clear();
+
 	for (auto& nt : graphMapMapMap) {
 		for (auto& nid : nt.second) {
 			if (arcMapList.count(nt.first) == 0) {
@@ -545,6 +558,12 @@ void FlowGraph::getMinimumPathToFew_limitedEnergy(std::map<NodeGraph::NODE_TYPE,
 				arcMapListCost[nt.first] = *new_map;
 			}
 			arcMapListCost[nt.first][nid.first] = std::numeric_limits<unsigned int>::max();
+
+			if (arcMapListEnergyCost.count(nt.first) == 0) {
+				std::map<unsigned int, double> *new_map = new std::map<unsigned int, double>();
+				arcMapListEnergyCost[nt.first] = *new_map;
+			}
+			arcMapListEnergyCost[nt.first][nid.first] = std::numeric_limits<double>::max();
 		}
 	}
 
@@ -648,16 +667,19 @@ void FlowGraph::getMinimumPathToFew_limitedEnergy(std::map<NodeGraph::NODE_TYPE,
 				if (isRequested) {
 					if ((minimumTimeMap.count(n1.first) > 0) && (minimumTimeMap[n1.first].count(n2.first) > 0)){
 						unsigned int cost = 0;
+						double ecost = 0;
 						NodeGraph *act = minimumTimeMap[n1.first][n2.first];
 						while (act->predecessor_arc != nullptr) {
 							arcMapList[n1.first][n2.first].push_front(act->predecessor_arc);
 							cost += act->predecessor_arc->dest->time - act->predecessor_arc->src->time;
+							ecost += act->predecessor_arc->getEnergyCost();
 
 							act = act->predecessor_arc->src;
 						}
 
 						if (arcMapList[n1.first][n2.first].size() > 0) {
 							arcMapListCost[n1.first][n2.first] = cost;
+							arcMapListEnergyCost[n1.first][n2.first] = ecost;
 						}
 					}
 				}
@@ -673,17 +695,105 @@ void FlowGraph::getMinimumPathToFew_limitedEnergy(std::map<NodeGraph::NODE_TYPE,
 
 		// PRINT DEBUG
 		/*cout << "getMinimumPathToFew - Minimum paths:" << endl;
-			for (auto& n1 : arcMapList) {
-				for (auto& n2 : n1.second) {
-					cout << "getMinimumPathToFew - BFS for node " << n1.first << "-" << n2.first << " = " << endl;
-					for (auto a : n2.second) {
-						cout << "     " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "-" <<
-								a->arc_t << "->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
-					}
-					cout << endl;
+		for (auto& n1 : arcMapList) {
+			for (auto& n2 : n1.second) {
+				cout << "getMinimumPathToFew - BFS for node " << n1.first << "-" << n2.first << " = " << endl;
+				cout << "  from " << nodeStart->node_t << "-" << nodeStart->node_id <<
+						" having time cost: " << arcMapListCost[n1.first][n2.first] <<
+						" having energy cost: " << arcMapListEnergyCost[n1.first][n2.first] << endl;
+				for (auto a : n2.second) {
+					cout << "      " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "--" <<
+							a->arc_t << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
 				}
-			}*/
+				cout << endl;
+			}
+		}*/
 
+	}
+}
+
+void FlowGraph::getMinimumPathOnlyFly_GoAndBack(std::list<ArcGraph *> &arcList,
+		unsigned int &arcListTimeCost,
+		double &arcListEnergyCost,
+		Home *homeStart, unsigned int timeStart, DeliveryPoint *dp) {
+
+	//reset
+	arcList.clear();
+	arcListTimeCost = 0;
+	arcListEnergyCost = 0;
+
+	if (	(graphMapMapMap.count(NodeGraph::HOME) > 0) &&
+			(graphMapMapMap[NodeGraph::HOME].count(homeStart->getHomeIdNum()) > 0) &&
+			(graphMapMapMap[NodeGraph::HOME][homeStart->getHomeIdNum()].count(timeStart) > 0) ) {
+		NodeGraph *current = graphMapMapMap[NodeGraph::HOME][homeStart->getHomeIdNum()][timeStart];
+		ArcGraph *nextArch;
+
+		// 1^ Fase looking for a direct path toward the DP
+		do {
+			nextArch = nullptr;
+			for(auto& a : current->arcs) {
+				//cout << "Arch type: " << a->arc_t << endl << std::flush;
+				if (	(a->arc_t == ArcGraph::FLY_WITH_PACKAGE) &&
+						(a->dest->node_t == NodeGraph::DELIVERY_POINT) &&
+						(a->dest->node_id == dp->getDpIdNum())) {
+					nextArch = a;
+					break;
+				}
+				else if (a->arc_t == ArcGraph::STOP) {
+					nextArch = a;
+				}
+			}
+			if (nextArch == nullptr) {
+				cerr << "Something goes wrong in getMinimumPathOnlyFly_GoAndBack: nextArch for DP not found" << endl;
+				exit(EXIT_FAILURE);
+			}
+
+			arcList.push_back(nextArch);
+
+			arcListTimeCost += nextArch->dest->time - nextArch->src->time;
+			arcListEnergyCost += nextArch->getEnergyCost();
+
+			current = nextArch->dest;
+
+		} while (nextArch->arc_t != ArcGraph::FLY_WITH_PACKAGE);
+
+
+		// 2^ Fase looking for a fly back home
+		do {
+			nextArch = nullptr;
+			for(auto& a : current->arcs) {
+				if (	(a->arc_t == ArcGraph::FLY_EMPTY) &&
+						(a->dest->node_t == NodeGraph::HOME) &&
+						(a->dest->node_id == homeStart->getHomeIdNum())) {
+					nextArch = a;
+					break;
+				}
+				else if (a->arc_t == ArcGraph::STOP) {
+					nextArch = a;
+				}
+			}
+			if (nextArch == nullptr) {
+				cerr << "Something goes wrong in getMinimumPathOnlyFly_GoAndBack: nextArch for Home not found" << endl;
+				exit(EXIT_FAILURE);
+			}
+
+			arcList.push_back(nextArch);
+			arcListTimeCost += nextArch->dest->time - nextArch->src->time;
+			arcListEnergyCost += nextArch->getEnergyCost();
+
+			current = nextArch->dest;
+
+		} while (nextArch->arc_t != ArcGraph::FLY_EMPTY);
+
+
+		// PRINT DEBUG
+		cout << "getMinimumPathOnlyFly_GoAndBack - Minimum path from HOME" << homeStart->getHomeIdNum() << " and DP" << dp->getDpIdNum() << endl;
+		cout << "Path time cost: " << arcListTimeCost << " and energy cost: " << arcListEnergyCost << endl;
+		for (auto &a : arcList) {
+			cout << "      " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "--" <<
+					a->arc_t << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
+		}
+		cout << endl;
 	}
 }
 
