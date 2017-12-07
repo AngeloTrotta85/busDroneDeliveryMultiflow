@@ -61,6 +61,7 @@ public:
 		node_id = id;
 		node_t = type;
 		bfs_state = NOT_VISITED;
+		main_path_check = false;
 		distenace_from_root = std::numeric_limits<int>::max();
 		predecessor_arc = nullptr;
 		stop_ptr = nullptr;
@@ -89,6 +90,7 @@ public:
 	BFS_STATE bfs_state;
 	int distenace_from_root;
 	ArcGraph *predecessor_arc;
+	bool main_path_check;
 };
 
 class ArcGraph {
@@ -171,6 +173,7 @@ public:
 	bool exportDotFullEmptyGraph(std::string dotFileName);
 
 	void getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd);
+	void getMinimumPathToFew_limitedEnergy(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd, double energy);
 
 	bool check_pkt_feasibility(double s_lat, double s_lon, Package *p, Battery *b);
 

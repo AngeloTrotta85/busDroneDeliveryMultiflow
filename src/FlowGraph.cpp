@@ -381,9 +381,11 @@ void FlowGraph::getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsi
 		std::list<NodeGraph *> usedNode;
 		NodeGraph *root = nodeStart;
 
+		usedNode.push_back(root);
 		q.push_back(root);		// Q := queue initialized with {root}
 		minimumTimeMap[root->node_t][root->node_id] = root;
 		root->distenace_from_root = 0;
+		root->main_path_check = true;
 
 		//cout << "starting making the BFS" << endl; fflush(stdout);
 
@@ -395,10 +397,11 @@ void FlowGraph::getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsi
 
 			// check if I need to go forward or I found already all the minimum paths
 			//cout << "starting checking end" << endl; fflush(stdout);
-			if ( 	(current->node_id == root->node_id) &&
-					(current->node_t == root->node_t) &&
-					(current->predecessor_arc != nullptr) &&
-					(current->predecessor_arc->arc_t == ArcGraph::STOP) ) {
+			if (current->main_path_check) {
+			//if ( 	(current->node_id == root->node_id) &&
+			//		(current->node_t == root->node_t) &&
+			//		(current->predecessor_arc != nullptr) &&
+			//		(current->predecessor_arc->arc_t == ArcGraph::STOP) ) {
 				bool allOK = true;
 
 				for (auto n : nodesEnd) {
@@ -441,6 +444,11 @@ void FlowGraph::getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsi
 						adj->bfs_state = NodeGraph::DISCOVERED;	// label n as discovered
 						adj->predecessor_arc = a;				// n.parent = current
 						adj->distenace_from_root = current->distenace_from_root + (a->dest->time - a->src->time);
+
+						if ( (a->arc_t == ArcGraph::STOP) && (current->main_path_check) &&
+								(current->node_id == adj->node_id) && (current->node_t == adj->node_t) ) {
+							adj->main_path_check = true;
+						}
 
 						q.push_back(adj);						// Q.enqueue(n)
 
@@ -486,6 +494,7 @@ void FlowGraph::getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsi
 			un->bfs_state = NodeGraph::NOT_VISITED;
 			un->distenace_from_root = std::numeric_limits<int>::max();
 			un->predecessor_arc = nullptr;
+			un->main_path_check = false;
 		}
 
 		// PRINT DEBUG
@@ -500,6 +509,180 @@ void FlowGraph::getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsi
 				cout << endl;
 			}
 		}*/
+
+	}
+}
+
+void FlowGraph::getMinimumPathToFew_limitedEnergy(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd, double energy) {
+	std::list<NodeGraph *> q;
+	std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, NodeGraph *> > minimumTimeMap;
+
+	//reset
+	for (auto& l : arcMapList) {
+		for (auto& l1 : l.second) {
+			l1.second.clear();
+		}
+		l.second.clear();
+	}
+	arcMapList.clear();
+
+	for (auto& l : arcMapListCost) {
+		l.second.clear();
+	}
+	arcMapListCost.clear();
+
+	for (auto& nt : graphMapMapMap) {
+		for (auto& nid : nt.second) {
+			if (arcMapList.count(nt.first) == 0) {
+				std::map<unsigned int, std::list<ArcGraph *> > *new_map = new std::map<unsigned int, std::list<ArcGraph *> >();
+				arcMapList[nt.first] = *new_map;
+			}
+			std::list<ArcGraph *> *l = new std::list<ArcGraph *>();
+			arcMapList[nt.first][nid.first] = *l;
+
+			if (arcMapListCost.count(nt.first) == 0) {
+				std::map<unsigned int, unsigned int> *new_map = new std::map<unsigned int, unsigned int>();
+				arcMapListCost[nt.first] = *new_map;
+			}
+			arcMapListCost[nt.first][nid.first] = std::numeric_limits<unsigned int>::max();
+		}
+	}
+
+	if (	(graphMapMapMap.count(nodeStart->node_t) > 0) &&
+			(graphMapMapMap[nodeStart->node_t].count(nodeStart->node_id) > 0) &&
+			(graphMapMapMap[nodeStart->node_t][nodeStart->node_id].count(nodeStart->time) > 0) ) {
+
+		std::list<NodeGraph *> usedNode;
+		NodeGraph *root = nodeStart;
+
+		usedNode.push_back(root);
+		q.push_back(root);		// Q := queue initialized with {root}
+		minimumTimeMap[root->node_t][root->node_id] = root;
+		root->distenace_from_root = 0;
+		root->main_path_check = true;
+
+		//cout << "starting making the BFS" << endl; fflush(stdout);
+
+		while (!q.empty()) {
+			NodeGraph *current = q.front(); 				//current = Q.dequeue()
+			q.pop_front();
+
+			current->bfs_state = NodeGraph::VISITED;
+
+			// check if I need to go forward or I found already all the minimum paths
+			//cout << "starting checking end" << endl; fflush(stdout);
+			if (current->main_path_check) {
+				//if ( 	(current->node_id == root->node_id) &&
+				//		(current->node_t == root->node_t) &&
+				//		(current->predecessor_arc != nullptr) &&
+				//		(current->predecessor_arc->arc_t == ArcGraph::STOP) ) {
+				bool allOK = true;
+
+				for (auto n : nodesEnd) {
+					if ((minimumTimeMap.count(n->node_t) == 0) || (minimumTimeMap[n->node_t].count(n->node_id) == 0)) { // node not found yet
+						allOK = false;
+						break;
+					}
+					else if (minimumTimeMap[n->node_t][n->node_id]->distenace_from_root > current->distenace_from_root) {	// I can enhance this node
+						allOK = false;
+						break;
+					}
+				}
+
+				if (allOK) {
+					// found the minimum for everybody
+					break;
+				}
+			}
+			//cout << "end checking end" << endl; fflush(stdout);
+
+			if (minimumTimeMap.count(current->node_t) == 0){
+				std::map<unsigned int, NodeGraph *> *nm = new std::map<unsigned int, NodeGraph *>();
+				(*nm)[current->node_id] = current;
+				minimumTimeMap[current->node_t] = *nm;
+			}
+			else if (minimumTimeMap[current->node_t].count(current->node_id) == 0) {
+				minimumTimeMap[current->node_t][current->node_id] = current;
+			}
+			else if (minimumTimeMap[current->node_t][current->node_id]->distenace_from_root > current->distenace_from_root){
+				minimumTimeMap[current->node_t][current->node_id] = current;
+			}
+
+			for (auto& a : current->arcs) {					//for each node n that is adjacent to current:
+				//if ( (a->arc_t != ArcGraph::COVER) && (!(a->reserved)) ) {
+				if ( !(a->reserved) ) {
+					NodeGraph *adj = a->dest;
+
+					if (adj->bfs_state == NodeGraph::NOT_VISITED) { // if n is not labeled as discovered:
+
+						adj->bfs_state = NodeGraph::DISCOVERED;	// label n as discovered
+						adj->predecessor_arc = a;				// n.parent = current
+						adj->distenace_from_root = current->distenace_from_root + (a->dest->time - a->src->time);
+
+						if ( (a->arc_t == ArcGraph::STOP) && (current->main_path_check) &&
+								(current->node_id == adj->node_id) && (current->node_t == adj->node_t) ) {
+							adj->main_path_check = true;
+						}
+
+						q.push_back(adj);						// Q.enqueue(n)
+
+						// improvements
+						usedNode.push_back(adj);
+					}
+				}
+			}
+		}
+
+		//cout << "end making the BFS" << endl; fflush(stdout);
+
+		// finished the BFS
+		for (auto& n1 : arcMapList) {
+			for (auto& n2 : n1.second) {
+				bool isRequested = false;
+				for (auto& checkS : nodesEnd) {
+					if ((checkS->node_t == n1.first) && (checkS->node_id == n2.first)) {
+						isRequested = true;
+						break;
+					}
+				}
+				if (isRequested) {
+					if ((minimumTimeMap.count(n1.first) > 0) && (minimumTimeMap[n1.first].count(n2.first) > 0)){
+						unsigned int cost = 0;
+						NodeGraph *act = minimumTimeMap[n1.first][n2.first];
+						while (act->predecessor_arc != nullptr) {
+							arcMapList[n1.first][n2.first].push_front(act->predecessor_arc);
+							cost += act->predecessor_arc->dest->time - act->predecessor_arc->src->time;
+
+							act = act->predecessor_arc->src;
+						}
+
+						if (arcMapList[n1.first][n2.first].size() > 0) {
+							arcMapListCost[n1.first][n2.first] = cost;
+						}
+					}
+				}
+			}
+		}
+
+		for (auto& un : usedNode) {
+			un->bfs_state = NodeGraph::NOT_VISITED;
+			un->distenace_from_root = std::numeric_limits<int>::max();
+			un->predecessor_arc = nullptr;
+			un->main_path_check = false;
+		}
+
+		// PRINT DEBUG
+		/*cout << "getMinimumPathToFew - Minimum paths:" << endl;
+			for (auto& n1 : arcMapList) {
+				for (auto& n2 : n1.second) {
+					cout << "getMinimumPathToFew - BFS for node " << n1.first << "-" << n2.first << " = " << endl;
+					for (auto a : n2.second) {
+						cout << "     " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "-" <<
+								a->arc_t << "->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
+					}
+					cout << endl;
+				}
+			}*/
 
 	}
 }
