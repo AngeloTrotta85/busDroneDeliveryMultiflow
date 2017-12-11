@@ -1287,7 +1287,7 @@ void Simulator::run(void) {
 	unsigned int time_step_sec = 1;
 
 
-	{	// TEST the getMinimumPathToFew
+	/*{	// TEST the getMinimumPathToFew
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > arcMapList;
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > arcMapListCost;
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, double > > arcMapListECost;
@@ -1311,17 +1311,13 @@ void Simulator::run(void) {
 				}
 			}
 		}
-
-		//flowGraph->getMinimumPathToFew(arcMapList, arcMapListCost, nodeStart, nodesEnd);
-		//flowGraph->getMinimumPathToFew_withEnergy(arcMapList, arcMapListCost, arcMapListECost, nodeStart, nodesEnd);
-
 		for (auto& ddd : flowGraph->graphMapMapMap[NodeGraph::DELIVERY_POINT]) {
 			DeliveryPoint *dpp = ddd.second.begin()->second->dp_ptr;
 			flowGraph->getMinimumPathOnlyFly_GoAndBack(arcList, arcListCost, arcListECost, nodeStart->home_ptr, nodeStart->time, dpp);
 		}
 
 		exit(EXIT_SUCCESS);
-	}
+	}*/
 
 	do {
 	//for (unsigned int t = 0; t < maxTime; t++){

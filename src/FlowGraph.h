@@ -99,8 +99,7 @@ public:
 		STOP,
 		BUS,
 		FLY_EMPTY,
-		FLY_WITH_PACKAGE,
-		RECHARGE_HOME
+		FLY_WITH_PACKAGE
 	} ARC_TYPE;
 public:
 	ArcGraph(){
@@ -175,6 +174,7 @@ public:
 	void setUavPosition(NodeGraph * ng, Uav *uav);
 	void updateUavOnFlow(unsigned int time);
 	virtual void activateUavFlow(unsigned int time, std::list<Uav *> &uavList);
+	virtual void activateUavFlow_old(unsigned int time, std::list<Uav *> &uavList);
 	void updateBatteries(Uav *u, unsigned int t);
 
 	bool exportDotResult(std::string dotFileName);
@@ -209,6 +209,9 @@ public:
 	Simulator *sim;
 
 	unsigned int swapCount;
+
+private:
+	std::map<int, std::list<ArcGraph *> > uavArcMapList;
 };
 
 

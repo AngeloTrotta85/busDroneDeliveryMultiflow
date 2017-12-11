@@ -255,13 +255,20 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 				a->dest->uavs.push_back(u);
 				u->setPositionNode(a->dest);
 
+				//cout << endl << "UAV" << u->getId() << " arrived at "
+				//		<< a->dest->node_t << "-" << a->dest->node_id << "-" << a->dest->time
+				//		<< endl << std::flush;
+
 				switch (a->dest->node_t) {
 					case NodeGraph::HOME:
 						u->setState(Uav::UAV_WAIT_HOME);	// I'm arrived back home
-						// release the battery
-						battUAV = u->removeBatt();
-						if (battUAV != nullptr) {
-							a->dest->home_ptr->bm->addBattery(battUAV);
+
+						if (uavArcMapList[u->getId()].size() == 0) {	// This is the last arc for this UAV so I can remove the battery
+							// release the battery
+							battUAV = u->removeBatt();
+							if (battUAV != nullptr) {
+								a->dest->home_ptr->bm->addBattery(battUAV);
+							}
 						}
 						u->setPosLat(a->dest->home_ptr->getHomeLatNum());
 						u->setPosLon(a->dest->home_ptr->getHomeLonNum());
@@ -286,6 +293,8 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 						cerr << "WARNING in updateUavOnFlow. Unexpected NodeGraph: " << a->dest->node_t << endl;
 						break;
 				}
+
+				u->setActualArch(nullptr);
 			}
 		}
 	}
@@ -744,8 +753,12 @@ void FlowGraph::getMinimumPathOnlyFly_GoAndBack(std::list<ArcGraph *> &arcList,
 				}
 			}
 			if (nextArch == nullptr) {
-				cerr << "Something goes wrong in getMinimumPathOnlyFly_GoAndBack: nextArch for DP not found" << endl;
-				exit(EXIT_FAILURE);
+				//cerr << "Something goes wrong in getMinimumPathOnlyFly_GoAndBack: nextArch for DP not found" << endl;
+				//exit(EXIT_FAILURE);
+				arcList.clear();
+				arcListTimeCost = 0;
+				arcListEnergyCost = 0;
+				return;
 			}
 
 			arcList.push_back(nextArch);
@@ -774,8 +787,12 @@ void FlowGraph::getMinimumPathOnlyFly_GoAndBack(std::list<ArcGraph *> &arcList,
 				}
 			}
 			if (nextArch == nullptr) {
-				cerr << "Something goes wrong in getMinimumPathOnlyFly_GoAndBack: nextArch for Home not found" << endl;
-				exit(EXIT_FAILURE);
+				//cerr << "Something goes wrong in getMinimumPathOnlyFly_GoAndBack: nextArch for Home not found" << endl;
+				//exit(EXIT_FAILURE);
+				arcList.clear();
+				arcListTimeCost = 0;
+				arcListEnergyCost = 0;
+				return;
 			}
 
 			arcList.push_back(nextArch);
@@ -788,13 +805,13 @@ void FlowGraph::getMinimumPathOnlyFly_GoAndBack(std::list<ArcGraph *> &arcList,
 
 
 		// PRINT DEBUG
-		cout << "getMinimumPathOnlyFly_GoAndBack - Minimum path from HOME" << homeStart->getHomeIdNum() << " and DP" << dp->getDpIdNum() << endl;
-		cout << "Path time cost: " << arcListTimeCost << " and energy cost: " << arcListEnergyCost << endl;
-		for (auto &a : arcList) {
-			cout << "      " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "--" <<
-					a->arc_t << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
-		}
-		cout << endl;
+		//cout << "getMinimumPathOnlyFly_GoAndBack - Minimum path from HOME" << homeStart->getHomeIdNum() << " and DP" << dp->getDpIdNum() << endl;
+		//cout << "Path time cost: " << arcListTimeCost << " and energy cost: " << arcListEnergyCost << endl;
+		//for (auto &a : arcList) {
+		//	cout << "      " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "--" <<
+		//			a->arc_t << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
+		//}
+		//cout << endl;
 	}
 }
 
@@ -834,6 +851,129 @@ bool FlowGraph::check_pkt_feasibility(double s_lat, double s_lon, Package *p, Ba
 }
 
 void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
+	for (auto& u : uavList){
+		NodeGraph *ng = u->getPositionNode();
+
+		if (uavArcMapList.count(u->getId()) == 0) {
+			std::list<ArcGraph *> *ag = new std::list<ArcGraph *>();
+			uavArcMapList[u->getId()] = *ag;
+		}
+
+		if (u->getActualArch() == nullptr) {
+
+			//cout << "UAV" << u->getId() << " has no arc. Path list size: " << uavArcMapList[u->getId()].size() << endl << std::flush;
+
+			if (uavArcMapList[u->getId()].size() == 0) {
+				if (u->getState() == Uav::UAV_WAIT_HOME) { // check for the new path only for the UAV waiting at HOME
+					Home *waitingHome = u->getBelongingHome();
+
+					if (waitingHome->wa->getWarehousePktNumber() > 0) {
+						std::list<ArcGraph *> arcList;
+						unsigned int arcListTimeCost = 0;
+						double arcListEnergyCost = 0;
+
+						for (auto itP = waitingHome->wa->wareHouse.begin(); itP != waitingHome->wa->wareHouse.end(); itP++) {
+							Package *pckToCarry = *itP;
+							Battery *bToLoad = nullptr;
+							//cout << "Calculating minimum path for the UAV" << u->getId() << endl;
+							getMinimumPathOnlyFly_GoAndBack(arcList, arcListTimeCost, arcListEnergyCost, waitingHome, time, pckToCarry->dest_dp);
+
+							if (arcList.size() > 0) {
+								// check if there is a battery with enough battery to carry this package
+								for (auto& b : waitingHome->bm->batteryList) {
+									if (b->getResudualEnergy() > arcListEnergyCost) {
+										waitingHome->wa->wareHouse.erase(itP);
+
+										bToLoad = waitingHome->bm->popBattery(b->id_batt);
+										bToLoad->setState(Battery::BATTERY_DISCHARGING_ONUAV);
+
+										u->setBatt(bToLoad);
+										u->setCarryingPackage(pckToCarry);
+
+										// set the path
+										for (auto itAL = arcList.begin(); itAL != arcList.end(); itAL++) {
+											uavArcMapList[u->getId()].push_back(*itAL);
+										}
+
+										//cout << "Path found for UAV" << u->getId() << endl << std::flush;
+
+										break;
+									}
+								}
+							}
+
+							if (bToLoad != nullptr) {
+								break;
+							}
+						}
+						//arcList.clear();
+					}
+
+					if (uavArcMapList[u->getId()].size() == 0) {	// no package available or battery to carry it. Stay at home
+						//cout << "No Package to carry, stay at home" << endl << std::flush;
+						for (auto a : ng->arcs) {
+							if (a->arc_t == ArcGraph::STOP) {
+								uavArcMapList[u->getId()].push_back(a);
+								break;
+							}
+						}
+					}
+				}
+				else {
+					cerr << "Error: UAV" << u->getId() << " has no calculated path but it is not at HOME (act state " << u->getState() << ")" << endl;
+					exit (EXIT_FAILURE);
+				}
+			}
+
+			if (uavArcMapList[u->getId()].size() > 0) {
+				ArcGraph *ag = uavArcMapList[u->getId()].front();
+				uavArcMapList[u->getId()].pop_front();
+
+				//cout << "UAV" << u->getId() << " - Load next ARC "
+				//		<< ag->src->node_t << "-" << ag->src->node_id << "-" << ag->src->time << " -> "
+				//		<< ag->dest->node_t << "-" << ag->dest->node_id << "-" << ag->dest->time
+				//		<< endl << std::flush;
+
+				if ((ag->src->node_t != u->getPositionNode()->node_t) || (ag->src->node_id != u->getPositionNode()->node_id) || (ag->src->time != u->getPositionNode()->time)) {
+					cerr << endl << time << " UAV " << u->getId() << " Wrong path... why?" << endl;
+					cerr << time << " UAV " << u->getId() << " Arc node: " << ag->src->node_t << "-" << ag->src->node_id << "-" << ag->src->time << endl;
+					cerr << time << " UAV " << u->getId() << " UAV node: " << u->getPositionNode()->node_t << "-" << u->getPositionNode()->node_id << "-" << u->getPositionNode()->time << endl;
+					exit(EXIT_FAILURE);
+				}
+				else {
+					switch (ag->arc_t) {
+					case ArcGraph::STOP:
+						// DO NOTHING
+						break;
+
+					case ArcGraph::FLY_EMPTY:
+						u->setState(Uav::UAV_FLYING);
+						break;
+
+					case ArcGraph::FLY_WITH_PACKAGE:
+						u->setState(Uav::UAV_FLYING);
+						break;
+
+					case ArcGraph::BUS:
+						u->setState(Uav::UAV_ONBUS);
+						break;
+
+					default:
+						cerr << "Wrong ARC type: " << ag->arc_t << endl;
+						exit(EXIT_FAILURE);
+						break;
+					}
+
+					ag->uavOnTheArc.push_back(u);
+					activeArc.push_back(ag);
+					u->setActualArch(ag);
+				}
+			}
+		}
+	}
+}
+
+void FlowGraph::activateUavFlow_old(unsigned int time, std::list<Uav *> &uavList){
 	for (auto& u : uavList){
 		NodeGraph *ng = u->getPositionNode();
 		Home *waitingHome;
@@ -1028,7 +1168,7 @@ void FlowGraph::execute(struct std::tm time, std::list<Uav *> &uavList){
 	//std::map<unsigned int, std::list<ArcGraph *> > ag;
 	//getMinimumPathAll(ag, 469, graphMapMap.begin()->second.begin()->first);
 
-	//cout << "Time: " << t << " - Begin activateUavFlow" << endl; fflush(stdout);
+	//cout << endl << "Time: " << t << " - Begin activateUavFlow" << endl; fflush(stdout);
 	activateUavFlow(t, uavList);
 	//cout << "Time: " << t << " - Begin updateUavOnFlow" << endl; fflush(stdout);
 	updateUavOnFlow(t+1);

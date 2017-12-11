@@ -52,7 +52,7 @@ void Uav::setResudualEnergy(double resudualEnergy) {
 }
 
 double Uav::addEnergy(double watt, double seconds) {
-
+	//cout << "Battery load on UAV" << id << ": " << batt << endl << std::flush;
 	return batt->addEnergy(watt, seconds);
 }
 
