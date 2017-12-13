@@ -311,41 +311,6 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 		}
 	}
 
-	//TODO TODO
-/*
-	for (auto itA = activeArc.begin(); itA != activeArc.end(); itA++) {
-		ArcGraph *a = *itA;
-		if (a->dest->time == time) {
-			for (auto& u : a->uavOnTheArc) {
-				graphMapMap[a->dest->stop_id][a->dest->time]->uavs.push_back(u);
-
-				u->setPositionStopId(a->dest->stop_id);
-				u->setState(Uav::UAV_FLYING);	// for sure is flying if ends an arc
-
-				//if (a->arc_t == ArcGraph::BUS) {
-				//	cout << time << " UAV " << u->getId() << " is arriving at stop " << a->dest->stop_id << endl;
-				//}
-				//cout << "Uav " << u->getId() << " is leaving the BUS at time " << time << endl;
-			}
-
-			//itA = activeArc.erase(itA);
-		}
-	}
-
-	// MAH! FACCIO UNA COPIA
-	std::list<ArcGraph *> activeArc_copy;
-	for (auto& a : activeArc) {
-		activeArc_copy.push_back(a);
-	}
-	activeArc.clear();
-	for (auto& a : activeArc_copy) {
-		if (a->dest->time > time) {
-			activeArc.push_back(a);
-		}
-	}
-
-	*/
-
 	//cout << time << " AFTER  Active arc: ";
 	//for (auto& a : activeArc) {
 	//	cout << "Type: " << a->arc_t << "; U_N: " << a->uavOnTheArc.size() << " " << a->src->stop_id << "_" << a->src->time << "->" << a->dest->stop_id << "_" << a->dest->time << ". ";
