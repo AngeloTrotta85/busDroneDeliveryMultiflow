@@ -846,7 +846,11 @@ void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
 							if (arcList.size() > 0) {
 								// check if there is a battery with enough battery to carry this package
 								for (auto& b : waitingHome->bm->batteryList) {
-									if (b->getResudualEnergy() > arcListEnergyCost) {
+
+									//cout << endl << "UAV" << u->getId() << " check battery. Path cost: " << arcListEnergyCost << " - battery available: " << b->getResudualEnergy() << endl << std::flush;
+
+									//if (b->getResudualEnergy() > arcListEnergyCost) {
+									if ((b->getResudualEnergy() + arcListEnergyCost) > 0) {
 										waitingHome->wa->wareHouse.erase(itP);
 
 										bToLoad = waitingHome->bm->popBattery(b->id_batt);
