@@ -169,10 +169,11 @@ public:
 
 	NodeGraph *getNodePtr(NodeGraph::NODE_TYPE n_type, unsigned int id, struct std::tm time_tm);
 
-	virtual void setInitExtraUAV(std::list <Uav *> &remainingUAV, struct std::tm time_tm, std::map<unsigned long int, Stops> &stopsMap);
+	//virtual void setInitExtraUAV(std::list <Uav *> &remainingUAV, struct std::tm time_tm, std::map<unsigned long int, Stops> &stopsMap);
 	//void setUavPosition(struct std::tm time, Uav *uav);
 	void setUavPosition(NodeGraph * ng, Uav *uav);
 	void updateUavOnFlow(unsigned int time);
+	virtual void generateUavPath(unsigned int time, Uav *u);
 	virtual void activateUavFlow(unsigned int time, std::list<Uav *> &uavList);
 	virtual void activateUavFlow_old(unsigned int time, std::list<Uav *> &uavList);
 	void updateBatteries(Uav *u, unsigned int t);
@@ -210,7 +211,7 @@ public:
 
 	unsigned int swapCount;
 
-private:
+protected:
 	std::map<int, std::list<ArcGraph *> > uavArcMapList;
 };
 

@@ -25,7 +25,9 @@
 #include "StopTimes.h"
 #include "Uav.h"
 #include "BusRoute.h"
+
 #include "FlowGraph.h"
+#include "GreedyFlowGraph.h"
 //#include "TspGraph.h"
 //#include "BestPoiGraph.h"
 //#include "WorstUav.h"
@@ -145,7 +147,6 @@ public:
 	void setTimeslot(unsigned int timeslot) {		this->timeslot = timeslot;	}
 	double getUavAvgSpeed() const {		return uavAvgSpeed;	}
 	void setUavAvgSpeed(double uavAvgSpeed) {		this->uavAvgSpeed = uavAvgSpeed;	}
-	bool isToCluster() const {		return toCluster;	}
 
 public:
 	// This function converts decimal degrees to radians
@@ -206,7 +207,10 @@ private:
 
 	unsigned int finalLifetime;
 
-	bool toCluster;
+	bool generateAllFlyLink;
+	double maxDistanceFlyLink_fromHome;
+	double maxDistanceFlyLink_fromDP;
+	double maxDistanceFlyLink_fromStop;
 
 	// Watt
 	double eSTOP;

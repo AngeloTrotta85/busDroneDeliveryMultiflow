@@ -34,6 +34,11 @@ Simulator::Simulator() {
 	initialUavEnergy = 130000; //Joule
 	maxUavEnergy = 130000;
 
+	generateAllFlyLink = true;
+	maxDistanceFlyLink_fromHome = 0;
+	maxDistanceFlyLink_fromDP = 0;
+	maxDistanceFlyLink_fromStop = 0;
+
 	stopsMinLat = 44.484336; //std::numeric_limits<double>::min();
 	stopsMaxLat = 44.506704; //std::numeric_limits<double>::max();
 	stopsMinLon = 11.326122; //std::numeric_limits<double>::min();
@@ -59,8 +64,6 @@ Simulator::Simulator() {
 	//flowGraph = new BestPoiGraph(this);
 	//flowGraph = new WorstUav(this);
 	flowGraph = nullptr;
-
-	toCluster = false;
 
 	finalLifetime = 0;
 }
@@ -102,31 +105,31 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 	}*/
 
 	// ALGORITHM TYPE
-	/*const std::string &algoTypeString = inputVal->getCmdOption("-a");
+	const std::string &algoTypeString = inputVal->getCmdOption("-a");
 	if (!algoTypeString.empty()) {
-		if (algoTypeString.compare("TSP") == 0) {
-			cout << "Setting algo TSP" << endl;
-			flowGraph = new TspGraph(this);
+		if (algoTypeString.compare("Greedy") == 0) {
+			cout << "Setting algo Greedy" << endl;
+			flowGraph = new GreedyFlowGraph(this);
 		}
-		else if (algoTypeString.compare("BESTPOI") == 0) {
+		/*else if (algoTypeString.compare("BESTPOI") == 0) {
 			cout << "Setting algo BESTPOI" << endl;
 			flowGraph = new BestPoiGraph(this);
 		}
 		else if (algoTypeString.compare("WORSTUAV") == 0) {
 			cout << "Setting algo WORSUAV" << endl;
 			flowGraph = new WorstUav(this);
-		}
+		}*/
 		else {
-			cout << "Setting algo NOREC" << endl;
+			cout << "Setting algo OnlyFly" << endl;
 			flowGraph = new FlowGraph(this);
 		}
 	}
 	else {
-		cout << "Setting algo default NOREC" << endl;
+		cout << "Setting algo default OnlyFly" << endl;
 		flowGraph = new FlowGraph(this);
-	}*/
-	cout << "Setting algo default NOREC" << endl;
-	flowGraph = new FlowGraph(this);
+	}
+	//cout << "Setting algo default NOREC" << endl;
+	//flowGraph = new FlowGraph(this);
 
 	// START SIMULATION TIME
 	const std::string &sSimString = inputVal->getCmdOption("-sSIM");
@@ -325,6 +328,50 @@ void Simulator::importSomeParameterFromInputLine(InputParser *inputVal) {
 	else {
 		uavOffsetMovement = 10;
 	}
+
+	// GENERATE FLY LINK FLAG
+	const std::string &generateAllFlyLinkString = inputVal->getCmdOption("-genFL");
+	if (!generateAllFlyLinkString.empty()) {
+		if (generateAllFlyLinkString.compare("0") == 0) {
+			generateAllFlyLink = false;
+		}
+		else {
+			generateAllFlyLink = true;
+		}
+	}
+	else {
+		generateAllFlyLink = true;
+	}
+
+	// MAXIMUM DISTANCE FOR THE FLY-LINKS FROM/TO Home IFF "generateAllFlyLink = false"
+	const std::string &maxDistanceFlyLink_fromHomeStr = inputVal->getCmdOption("-maxDFH");
+	if (!maxDistanceFlyLink_fromHomeStr.empty()) {
+		maxDistanceFlyLink_fromHome = atof(maxDistanceFlyLink_fromHomeStr.c_str());
+	}
+	else {
+		maxDistanceFlyLink_fromHome = -1;
+	}
+	if (maxDistanceFlyLink_fromHome < 0) maxDistanceFlyLink_fromHome = std::numeric_limits<double>::max(); // NO LIMIT
+
+	// MAXIMUM DISTANCE FOR THE FLY-LINKS FROM/TO DeliveryPoints IFF "generateAllFlyLink = false"
+	const std::string &maxDistanceFlyLink_fromDPStr = inputVal->getCmdOption("-maxDFD");
+	if (!maxDistanceFlyLink_fromDPStr.empty()) {
+		maxDistanceFlyLink_fromDP = atof(maxDistanceFlyLink_fromDPStr.c_str());
+	}
+	else {
+		maxDistanceFlyLink_fromDP = -1;
+	}
+	if (maxDistanceFlyLink_fromDP < 0) maxDistanceFlyLink_fromDP = std::numeric_limits<double>::max(); // NO LIMIT
+
+	// MAXIMUM DISTANCE FOR THE FLY-LINKS FROM/TO Stops IFF "generateAllFlyLink = false"
+	const std::string &maxDistanceFlyLink_fromStopStr = inputVal->getCmdOption("-maxDFS");
+	if (!maxDistanceFlyLink_fromStopStr.empty()) {
+		maxDistanceFlyLink_fromStop = atof(maxDistanceFlyLink_fromStopStr.c_str());
+	}
+	else {
+		maxDistanceFlyLink_fromStop = -1;
+	}
+	if (maxDistanceFlyLink_fromStop < 0) maxDistanceFlyLink_fromStop = std::numeric_limits<double>::max(); // NO LIMIT
 
 	//DEBUG PRINT
 	cout << "Using Energy -> init:" << initialUavEnergy
@@ -1068,17 +1115,38 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 		for (auto& st_start : stopsMap) {
 			for (auto& st_end : stopsMap) {
 				if (st_start.second.getStopIdNum() != st_end.second.getStopIdNum()) {
-					generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
-							NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+					if (	(generateAllFlyLink) ||
+							(distanceEarth(
+									st_start.second.getStopLatNum(),
+									st_start.second.getStopLonNum(),
+									st_end.second.getStopLatNum(),
+									st_end.second.getStopLonNum() ) < maxDistanceFlyLink_fromStop) ){
+						generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
+								NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+					}
 				}
 			}
 			for (auto& hh_end : homesMap) {
-				generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
-						NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+				if (	(generateAllFlyLink) ||
+						(distanceEarth(
+								st_start.second.getStopLatNum(),
+								st_start.second.getStopLonNum(),
+								hh_end.second.getHomeLatNum(),
+								hh_end.second.getHomeLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromHome)) ){
+					generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
+							NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+				}
 			}
 			for (auto& dp_end : deliveryPointsMap) {
-				generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
-						NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
+				if (	(generateAllFlyLink) ||
+						(distanceEarth(
+								st_start.second.getStopLatNum(),
+								st_start.second.getStopLonNum(),
+								dp_end.second.getDpLatNum(),
+								dp_end.second.getDpLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromDP)) ){
+					generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
+							NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
+				}
 			}
 
 			//fprintf(stdout, "\rGenerating arcs stop->X %.03f%%", (counter / ((double)stopsMap.size())) * 100.0);
@@ -1088,18 +1156,39 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 		//counter = 0;
 		for (auto& hh_start : homesMap) {
 			for (auto& st_end : stopsMap) {
-				generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
-						NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+				if (	(generateAllFlyLink) ||
+						(distanceEarth(
+								hh_start.second.getHomeLatNum(),
+								hh_start.second.getHomeLonNum(),
+								st_end.second.getStopLatNum(),
+								st_end.second.getStopLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromHome)) ){
+					generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
+							NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+				}
 			}
 			for (auto& hh_end : homesMap) {
 				if (hh_start.second.getHomeIdNum() != hh_end.second.getHomeIdNum()) {
-					generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
-							NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+					if (	(generateAllFlyLink) ||
+							(distanceEarth(
+									hh_start.second.getHomeLatNum(),
+									hh_start.second.getHomeLonNum(),
+									hh_end.second.getHomeLatNum(),
+									hh_end.second.getHomeLonNum() ) < maxDistanceFlyLink_fromHome) ){
+						generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
+								NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+					}
 				}
 			}
 			for (auto& dp_end : deliveryPointsMap) {
-				generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
-						NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
+				if (	(generateAllFlyLink) ||
+						(distanceEarth(
+								hh_start.second.getHomeLatNum(),
+								hh_start.second.getHomeLonNum(),
+								dp_end.second.getDpLatNum(),
+								dp_end.second.getDpLonNum() ) < std::min(maxDistanceFlyLink_fromDP, maxDistanceFlyLink_fromHome)) ){
+					generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
+							NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
+				}
 			}
 
 			//fprintf(stdout, "\rGenerating arcs home->X %.03f%%", (counter / ((double)homesMap.size())) * 100.0);
@@ -1109,12 +1198,26 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 		//counter = 0;
 		for (auto& dp_start : deliveryPointsMap) {
 			for (auto& st_end : stopsMap) {
-				generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
-						NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+				if (	(generateAllFlyLink) ||
+						(distanceEarth(
+								dp_start.second.getDpLatNum(),
+								dp_start.second.getDpLonNum(),
+								st_end.second.getStopLatNum(),
+								st_end.second.getStopLonNum() ) < std::min(maxDistanceFlyLink_fromDP, maxDistanceFlyLink_fromStop)) ){
+					generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
+							NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
+				}
 			}
 			for (auto& hh_end : homesMap) {
-				generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
-						NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+				if (	(generateAllFlyLink) ||
+						(distanceEarth(
+								dp_start.second.getDpLatNum(),
+								dp_start.second.getDpLonNum(),
+								hh_end.second.getHomeLatNum(),
+								hh_end.second.getHomeLonNum() ) < std::min(maxDistanceFlyLink_fromDP, maxDistanceFlyLink_fromHome)) ){
+					generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
+							NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
+				}
 			}
 
 			//fprintf(stdout, "\rGenerating arcs dp->X %.03f%%", (counter / ((double)deliveryPointsMap.size())) * 100.0);
