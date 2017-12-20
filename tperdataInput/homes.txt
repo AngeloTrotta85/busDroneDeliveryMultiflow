@@ -1,3 +1,3 @@
 home_id,home_name,home_lat,home_lon,wa_type,wa_pkt_w,wa_pkt_init,wa_pkt_genrate,batt_manag_type,charg_num,charg_batt_init_num,charg_batt_init_val
-"1","HOME_STAZIONE","44.5057657540716","11.3431758861234","standardWA","1000","10","0.01667","standardBM","2","4","130000"
-#"2","HOME_CRESPELLANO","44.514276","11.170288","standardWA","1000","10","0.01667","standardBM","2","4","130000"
+"1","HOME_STAZIONE","44.5057657540716","11.3431758861234","standardWA","1000","10","0.01667","standardBM","3","3","130000"
+#"2","HOME_CRESPELLANO","44.514276","11.170288","standardWA","1000","10","0.01667","standardBM","3","3","130000"

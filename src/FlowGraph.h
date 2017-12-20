@@ -182,7 +182,7 @@ public:
 	bool exportDotFullEmptyGraph(std::string dotFileName);
 
 	void getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd);
-	void getMinimumPathToFew_withEnergy(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, double > > &arcMapListEnergyCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd);
+	void getMinimumPathToFew_withEnergy(std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost, std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, double > > &arcMapListEnergyCost, NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd, bool useFlyFreeLinks, bool useFlyPackageLinks);
 	void getMinimumPathOnlyFly_GoAndBack(std::list<ArcGraph *> &arcList, unsigned int &arcListTimeCost, double &arcListEnergyCost, Home *homeStart, unsigned int timeStart, DeliveryPoint *dp);
 
 	bool check_pkt_feasibility(double s_lat, double s_lon, Package *p, Battery *b);

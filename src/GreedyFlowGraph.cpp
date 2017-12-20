@@ -25,7 +25,7 @@ void GreedyFlowGraph::generateUavPath(unsigned int time, Uav *u){
 
 		if (waitingHome->wa->getWarehousePktNumber() > 0) {
 			std::list<ArcGraph *> arcList;
-			unsigned int arcListTimeCost = 0;
+			//unsigned int arcListTimeCost = 0;
 			double arcListEnergyCost = 0;
 
 			for (auto itP = waitingHome->wa->wareHouse.begin(); itP != waitingHome->wa->wareHouse.end(); itP++) {
@@ -40,20 +40,31 @@ void GreedyFlowGraph::generateUavPath(unsigned int time, Uav *u){
 				nodesEndGo.push_back(graphMapMapMap[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()].begin()->second);
 				nodesEndBack.push_back(ng);
 
-				//cout << "Calculating minimum path for the UAV" << u->getId() << endl;
+				//cout << endl << "Calculating minimum path for the UAV" << u->getId() << endl;
+				//cout << "Generating path from HOME" << ng->node_id << " to DeliveryPoint" << pckToCarry->dest_dp->getDpIdNum() << endl;
 
-				getMinimumPathToFew_withEnergy(arcMapListGo, arcMapListCostGo, arcMapListEnergyCostGo, ng, nodesEndGo);
-				if (arcMapListGo.size() > 0) {
-					getMinimumPathToFew_withEnergy(arcMapListBack, arcMapListCostBack, arcMapListEnergyCostBack, ng, nodesEndBack);
-					if (arcMapListBack.size() > 0) {
+				getMinimumPathToFew_withEnergy(arcMapListGo, arcMapListCostGo, arcMapListEnergyCostGo, ng, nodesEndGo, false, true);
+				if (arcMapListGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()].size() > 0) {
+					NodeGraph *ngDParrived = arcMapListGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()].back()->dest;
+					getMinimumPathToFew_withEnergy(arcMapListBack, arcMapListCostBack, arcMapListEnergyCostBack, ngDParrived, nodesEndBack, true, false);
+					if (arcMapListBack[ng->node_t][ng->node_id].size() > 0) {
 						//TODO set: arcList, arcListTimeCost, arcListEnergyCost;
-
+						//arcListTimeCost = arcMapListCostGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()] +
+						//		arcMapListCostBack[ng->node_t][ng->node_id];
+						arcListEnergyCost = arcMapListEnergyCostGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()] +
+								arcMapListEnergyCostBack[ng->node_t][ng->node_id];
+						for (auto& itGO : arcMapListGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()]) {
+							arcList.push_back(itGO);
+						}
+						for (auto& itBACK : arcMapListBack[ng->node_t][ng->node_id]) {
+							arcList.push_back(itBACK);
+						}
 					}
 				}
 
+				//cout  << "End calculating minimum path for the UAV" << u->getId() << ", generating path from HOME" << ng->node_id << " to DeliveryPoint" << pckToCarry->dest_dp->getDpIdNum() << endl;
 
-
-				getMinimumPathOnlyFly_GoAndBack(arcList, arcListTimeCost, arcListEnergyCost, waitingHome, time, pckToCarry->dest_dp);
+				//getMinimumPathOnlyFly_GoAndBack(arcList, arcListTimeCost, arcListEnergyCost, waitingHome, time, pckToCarry->dest_dp);
 
 				if (arcList.size() > 0) {
 					// check if there is a battery with enough battery to carry this package
@@ -82,6 +93,11 @@ void GreedyFlowGraph::generateUavPath(unsigned int time, Uav *u){
 						}
 					}
 				}
+				else {
+					//UNDELIVERABLE PACKAGE
+					//waitingHome->wa->undeliverablePackage(pckToCarry);
+					itP = waitingHome->wa->wareHouse.erase(itP);
+				}
 
 				if (bToLoad != nullptr) {
 					break;
@@ -99,6 +115,34 @@ void GreedyFlowGraph::generateUavPath(unsigned int time, Uav *u){
 				}
 			}
 		}
+		/*else {
+			// PRINT DEBUG
+			cout << "FINAL PATH for UAV" << u->getId() << endl;
+			for (auto a : uavArcMapList[u->getId()]) {
+				std::string lt;
+				switch (a->arc_t) {
+				case ArcGraph::BUS:
+					lt = std::string("BUS");
+					break;
+				case ArcGraph::FLY_EMPTY:
+					lt = std::string("FLY_EMPTY");
+					break;
+				case ArcGraph::FLY_WITH_PACKAGE:
+					lt = std::string("FLY_PACK");
+					break;
+				case ArcGraph::STOP:
+					lt = std::string("STOP");
+					break;
+				default:
+					lt = std::string("UNKNOWN");
+					break;
+				}
+				cout << "      " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "--" <<
+						lt << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
+			}
+			cout << endl;
+			cout << "FINAL PATH - FINISH" << endl;
+		}*/
 	}
 	else {
 		cerr << "Error: UAV" << u->getId() << " has no calculated path but it is not at HOME (act state " << u->getState() << ")" << endl;

@@ -289,6 +289,8 @@ void FlowGraph::updateUavOnFlow(unsigned int time){
 						break;
 
 					case NodeGraph::STOP:
+						break;
+
 					default:
 						cerr << "WARNING in updateUavOnFlow. Unexpected NodeGraph: " << a->dest->node_t << endl;
 						break;
@@ -495,7 +497,8 @@ void FlowGraph::getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsi
 void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, std::list<ArcGraph *> > > &arcMapList,
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, unsigned int > > &arcMapListCost,
 		std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, double > > &arcMapListEnergyCost,
-		NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd) {
+		NodeGraph *nodeStart, std::vector<NodeGraph *> &nodesEnd,
+		bool useFlyFreeLinks, bool useFlyPackageLinks) {
 	std::list<NodeGraph *> q;
 	std::map<NodeGraph::NODE_TYPE, std::map<unsigned int, NodeGraph *> > minimumTimeMap;
 
@@ -520,24 +523,37 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 
 	for (auto& nt : graphMapMapMap) {
 		for (auto& nid : nt.second) {
-			if (arcMapList.count(nt.first) == 0) {
-				std::map<unsigned int, std::list<ArcGraph *> > *new_map = new std::map<unsigned int, std::list<ArcGraph *> >();
-				arcMapList[nt.first] = *new_map;
-			}
-			std::list<ArcGraph *> *l = new std::list<ArcGraph *>();
-			arcMapList[nt.first][nid.first] = *l;
 
-			if (arcMapListCost.count(nt.first) == 0) {
-				std::map<unsigned int, unsigned int> *new_map = new std::map<unsigned int, unsigned int>();
-				arcMapListCost[nt.first] = *new_map;
+			bool isRequested = false;
+			for (auto& checkS : nodesEnd) {
+				if ((checkS->node_t == nt.first) && (checkS->node_id == nid.first)) {
+					isRequested = true;
+					break;
+				}
 			}
-			arcMapListCost[nt.first][nid.first] = std::numeric_limits<unsigned int>::max();
+			if (isRequested) {
 
-			if (arcMapListEnergyCost.count(nt.first) == 0) {
-				std::map<unsigned int, double> *new_map = new std::map<unsigned int, double>();
-				arcMapListEnergyCost[nt.first] = *new_map;
+
+
+				if (arcMapList.count(nt.first) == 0) {
+					std::map<unsigned int, std::list<ArcGraph *> > *new_map = new std::map<unsigned int, std::list<ArcGraph *> >();
+					arcMapList[nt.first] = *new_map;
+				}
+				std::list<ArcGraph *> *l = new std::list<ArcGraph *>();
+				arcMapList[nt.first][nid.first] = *l;
+
+				if (arcMapListCost.count(nt.first) == 0) {
+					std::map<unsigned int, unsigned int> *new_map = new std::map<unsigned int, unsigned int>();
+					arcMapListCost[nt.first] = *new_map;
+				}
+				arcMapListCost[nt.first][nid.first] = std::numeric_limits<unsigned int>::max();
+
+				if (arcMapListEnergyCost.count(nt.first) == 0) {
+					std::map<unsigned int, double> *new_map = new std::map<unsigned int, double>();
+					arcMapListEnergyCost[nt.first] = *new_map;
+				}
+				arcMapListEnergyCost[nt.first][nid.first] = std::numeric_limits<double>::max();
 			}
-			arcMapListEnergyCost[nt.first][nid.first] = std::numeric_limits<double>::max();
 		}
 	}
 
@@ -602,27 +618,33 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 			}
 
 			for (auto& a : current->arcs) {					//for each node n that is adjacent to current:
-				//if ( (a->arc_t != ArcGraph::COVER) && (!(a->reserved)) ) {
-				if ( !(a->reserved) ) {
-					NodeGraph *adj = a->dest;
-
-					if (adj->bfs_state == NodeGraph::NOT_VISITED) { // if n is not labeled as discovered:
-
-						adj->bfs_state = NodeGraph::DISCOVERED;	// label n as discovered
-						adj->predecessor_arc = a;				// n.parent = current
-						adj->distenace_from_root = current->distenace_from_root + (a->dest->time - a->src->time);
-
-						if ( (a->arc_t == ArcGraph::STOP) && (current->main_path_check) &&
-								(current->node_id == adj->node_id) && (current->node_t == adj->node_t) ) {
-							adj->main_path_check = true;
-						}
-
-						q.push_back(adj);						// Q.enqueue(n)
-
-						// improvements
-						usedNode.push_back(adj);
-					}
+				if (	(a->reserved) ||
+						((!useFlyFreeLinks) && (a->arc_t == ArcGraph::FLY_EMPTY))	||
+						((!useFlyPackageLinks) && (a->arc_t == ArcGraph::FLY_WITH_PACKAGE))
+						){
+					continue;
 				}
+				//if ( (a->arc_t != ArcGraph::COVER) && (!(a->reserved)) ) {
+				//if ( !(a->reserved) ) {
+				NodeGraph *adj = a->dest;
+
+				if (adj->bfs_state == NodeGraph::NOT_VISITED) { // if n is not labeled as discovered:
+
+					adj->bfs_state = NodeGraph::DISCOVERED;	// label n as discovered
+					adj->predecessor_arc = a;				// n.parent = current
+					adj->distenace_from_root = current->distenace_from_root + (a->dest->time - a->src->time);
+
+					if ( (a->arc_t == ArcGraph::STOP) && (current->main_path_check) &&
+							(current->node_id == adj->node_id) && (current->node_t == adj->node_t) ) {
+						adj->main_path_check = true;
+					}
+
+					q.push_back(adj);						// Q.enqueue(n)
+
+					// improvements
+					usedNode.push_back(adj);
+				}
+				//}
 			}
 		}
 
@@ -676,13 +698,31 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 						" having time cost: " << arcMapListCost[n1.first][n2.first] <<
 						" having energy cost: " << arcMapListEnergyCost[n1.first][n2.first] << endl;
 				for (auto a : n2.second) {
+					std::string lt;
+					switch (a->arc_t) {
+					case ArcGraph::BUS:
+						lt = std::string("BUS");
+						break;
+					case ArcGraph::FLY_EMPTY:
+						lt = std::string("FLY_EMPTY");
+						break;
+					case ArcGraph::FLY_WITH_PACKAGE:
+						lt = std::string("FLY_PACK");
+						break;
+					case ArcGraph::STOP:
+						lt = std::string("STOP");
+						break;
+					default:
+						lt = std::string("UNKNOWN");
+						break;
+					}
 					cout << "      " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "--" <<
-							a->arc_t << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
+							lt << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
 				}
 				cout << endl;
 			}
-		}*/
-
+		}
+		cout << "getMinimumPathToFew - FINISH" << endl;*/
 	}
 }
 

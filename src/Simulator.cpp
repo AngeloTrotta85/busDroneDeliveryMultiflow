@@ -1132,7 +1132,8 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 								st_start.second.getStopLatNum(),
 								st_start.second.getStopLonNum(),
 								hh_end.second.getHomeLatNum(),
-								hh_end.second.getHomeLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromHome)) ){
+								hh_end.second.getHomeLonNum() ) < maxDistanceFlyLink_fromHome) ){
+								//hh_end.second.getHomeLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromHome)) ){
 					generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
 							NodeGraph::HOME, hh_end.second.getHomeIdNum(), hh_end.second.getHomeLatNum(), hh_end.second.getHomeLonNum(), packageW);
 				}
@@ -1143,7 +1144,8 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 								st_start.second.getStopLatNum(),
 								st_start.second.getStopLonNum(),
 								dp_end.second.getDpLatNum(),
-								dp_end.second.getDpLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromDP)) ){
+								dp_end.second.getDpLonNum() ) < maxDistanceFlyLink_fromDP) ){
+								//dp_end.second.getDpLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromDP)) ){
 					generateBothFlyArc(act_time, NodeGraph::STOP, st_start.second.getStopIdNum(), st_start.second.getStopLatNum(), st_start.second.getStopLonNum(),
 							NodeGraph::DELIVERY_POINT, dp_end.second.getDpIdNum(), dp_end.second.getDpLatNum(), dp_end.second.getDpLonNum(), packageW);
 				}
@@ -1161,7 +1163,8 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 								hh_start.second.getHomeLatNum(),
 								hh_start.second.getHomeLonNum(),
 								st_end.second.getStopLatNum(),
-								st_end.second.getStopLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromHome)) ){
+								st_end.second.getStopLonNum() ) < maxDistanceFlyLink_fromHome) ){
+								//st_end.second.getStopLonNum() ) < std::min(maxDistanceFlyLink_fromStop, maxDistanceFlyLink_fromHome)) ){
 					generateBothFlyArc(act_time, NodeGraph::HOME, hh_start.second.getHomeIdNum(), hh_start.second.getHomeLatNum(), hh_start.second.getHomeLonNum(),
 							NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
 				}
@@ -1203,7 +1206,8 @@ void Simulator::generateGraph(struct std::tm start_time, struct std::tm end_time
 								dp_start.second.getDpLatNum(),
 								dp_start.second.getDpLonNum(),
 								st_end.second.getStopLatNum(),
-								st_end.second.getStopLonNum() ) < std::min(maxDistanceFlyLink_fromDP, maxDistanceFlyLink_fromStop)) ){
+								st_end.second.getStopLonNum() ) < maxDistanceFlyLink_fromDP) ){
+								//st_end.second.getStopLonNum() ) < std::min(maxDistanceFlyLink_fromDP, maxDistanceFlyLink_fromStop)) ){
 					generateBothFlyArc(act_time, NodeGraph::DELIVERY_POINT, dp_start.second.getDpIdNum(), dp_start.second.getDpLatNum(), dp_start.second.getDpLonNum(),
 							NodeGraph::STOP, st_end.second.getStopIdNum(), st_end.second.getStopLatNum(), st_end.second.getStopLonNum(), packageW);
 				}
