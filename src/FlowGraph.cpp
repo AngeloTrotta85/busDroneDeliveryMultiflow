@@ -390,7 +390,7 @@ void FlowGraph::getMinimumPathToFew(std::map<NodeGraph::NODE_TYPE, std::map<unsi
 						allOK = false;
 						break;
 					}
-					else if (minimumTimeMap[n->node_t][n->node_id]->distenace_from_root > current->distenace_from_root) {	// I can enhance this node
+					else if (minimumTimeMap[n->node_t][n->node_id]->distenace_from_root >= current->distenace_from_root) {	// I can enhance this node
 						allOK = false;
 						break;
 					}
@@ -533,8 +533,6 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 			}
 			if (isRequested) {
 
-
-
 				if (arcMapList.count(nt.first) == 0) {
 					std::map<unsigned int, std::list<ArcGraph *> > *new_map = new std::map<unsigned int, std::list<ArcGraph *> >();
 					arcMapList[nt.first] = *new_map;
@@ -564,10 +562,15 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 		std::list<NodeGraph *> usedNode;
 		NodeGraph *root = nodeStart;
 
+		std::map<unsigned int, NodeGraph *> *nmRoot = new std::map<unsigned int, NodeGraph *>();
+		(*nmRoot)[root->node_id] = root;
+		minimumTimeMap[root->node_t] = *nmRoot;
+
 		usedNode.push_back(root);
 		q.push_back(root);		// Q := queue initialized with {root}
 		minimumTimeMap[root->node_t][root->node_id] = root;
 		root->distenace_from_root = 0;
+		root->energy_cost_from_root = 0;
 		root->main_path_check = true;
 
 		//cout << "starting making the BFS" << endl; fflush(stdout);
@@ -580,7 +583,8 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 
 			// check if I need to go forward or I found already all the minimum paths
 			//cout << "starting checking end" << endl; fflush(stdout);
-			if (current->main_path_check) {
+			// TODO resume
+			/*if (current->main_path_check) {
 				//if ( 	(current->node_id == root->node_id) &&
 				//		(current->node_t == root->node_t) &&
 				//		(current->predecessor_arc != nullptr) &&
@@ -592,7 +596,7 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 						allOK = false;
 						break;
 					}
-					else if (minimumTimeMap[n->node_t][n->node_id]->distenace_from_root > current->distenace_from_root) {	// I can enhance this node
+					else if (minimumTimeMap[n->node_t][n->node_id]->distenace_from_root >= current->distenace_from_root) {	// I can enhance this node
 						allOK = false;
 						break;
 					}
@@ -602,7 +606,7 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 					// found the minimum for everybody
 					break;
 				}
-			}
+			}*/
 			//cout << "end checking end" << endl; fflush(stdout);
 
 			if (minimumTimeMap.count(current->node_t) == 0){
@@ -611,6 +615,10 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 				minimumTimeMap[current->node_t] = *nm;
 			}
 			else if (minimumTimeMap[current->node_t].count(current->node_id) == 0) {
+				minimumTimeMap[current->node_t][current->node_id] = current;
+			}
+			else if (	(minimumTimeMap[current->node_t][current->node_id]->distenace_from_root == current->distenace_from_root) &&
+						(minimumTimeMap[current->node_t][current->node_id]->energy_cost_from_root < current->energy_cost_from_root) ){
 				minimumTimeMap[current->node_t][current->node_id] = current;
 			}
 			else if (minimumTimeMap[current->node_t][current->node_id]->distenace_from_root > current->distenace_from_root){
@@ -627,16 +635,43 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 				//if ( (a->arc_t != ArcGraph::COVER) && (!(a->reserved)) ) {
 				//if ( !(a->reserved) ) {
 				NodeGraph *adj = a->dest;
+				bool toAdd = false;
+				int adj_distenace_from_root = current->distenace_from_root + (a->dest->time - a->src->time);
+				double adj_energy_cost_from_root = current->energy_cost_from_root + a->getEnergyCost();
 
-				if (adj->bfs_state == NodeGraph::NOT_VISITED) { // if n is not labeled as discovered:
+				if (adj->bfs_state == NodeGraph::NOT_VISITED) {	// if n is not labeled as discovered:
+					toAdd = true;
+				} else if (minimumTimeMap.count(adj->node_t) == 0){
+					toAdd = true;
+				} else if (minimumTimeMap[adj->node_t].count(adj->node_id) == 0) {
+					toAdd = true;
+				} else if (	(minimumTimeMap[adj->node_t][adj->node_id]->distenace_from_root == adj_distenace_from_root) &&
+						(minimumTimeMap[adj->node_t][adj->node_id]->energy_cost_from_root < adj_energy_cost_from_root) ){
+					toAdd = true;
+				}
+				else if (minimumTimeMap[adj->node_t][adj->node_id]->distenace_from_root > adj_distenace_from_root){
+					toAdd = true;
+				}
+
+				if (toAdd) {
+
+				//if (	(adj->bfs_state == NodeGraph::NOT_VISITED) ||	// if n is not labeled as discovered:
+				//		(
+				//				(minimumTimeMap[adj->node_t][adj->node_id]->distenace_from_root == adj->distenace_from_root) &&
+				//				(minimumTimeMap[adj->node_t][adj->node_id]->energy_cost_from_root < adj->energy_cost_from_root)
+				//		)	){
 
 					adj->bfs_state = NodeGraph::DISCOVERED;	// label n as discovered
 					adj->predecessor_arc = a;				// n.parent = current
-					adj->distenace_from_root = current->distenace_from_root + (a->dest->time - a->src->time);
+					adj->distenace_from_root = adj_distenace_from_root;
+					adj->energy_cost_from_root = adj_energy_cost_from_root;
 
 					if ( (a->arc_t == ArcGraph::STOP) && (current->main_path_check) &&
 							(current->node_id == adj->node_id) && (current->node_t == adj->node_t) ) {
 						adj->main_path_check = true;
+						cout << "Adding ARC: "
+								<< a->src->node_t << "-" << a->src->node_id << "-" << a->src->time << "->"
+								<< a->dest->node_t << "-" << a->dest->node_id << "-" << a->dest->time << endl;
 					}
 
 					q.push_back(adj);						// Q.enqueue(n)
@@ -682,15 +717,8 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 			}
 		}
 
-		for (auto& un : usedNode) {
-			un->bfs_state = NodeGraph::NOT_VISITED;
-			un->distenace_from_root = std::numeric_limits<int>::max();
-			un->predecessor_arc = nullptr;
-			un->main_path_check = false;
-		}
-
 		// PRINT DEBUG
-		/*cout << "getMinimumPathToFew - Minimum paths:" << endl;
+		cout << "getMinimumPathToFew - Minimum paths:" << endl;
 		for (auto& n1 : arcMapList) {
 			for (auto& n2 : n1.second) {
 				cout << "getMinimumPathToFew - BFS for node " << n1.first << "-" << n2.first << " = " << endl;
@@ -717,12 +745,25 @@ void FlowGraph::getMinimumPathToFew_withEnergy(	std::map<NodeGraph::NODE_TYPE, s
 						break;
 					}
 					cout << "      " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "--" <<
-							lt << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
+							lt << "|" << a->getEnergyCost() << "-->"
+							<< a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time
+							<< " - DEST ecost=" << a->dest->energy_cost_from_root
+							<< " - DEST tcost=" << a->dest->distenace_from_root
+							<< " | " << endl;
 				}
 				cout << endl;
 			}
 		}
-		cout << "getMinimumPathToFew - FINISH" << endl;*/
+		cout << "getMinimumPathToFew - FINISH" << endl;
+
+
+		for (auto& un : usedNode) {
+			un->bfs_state = NodeGraph::NOT_VISITED;
+			un->distenace_from_root = std::numeric_limits<int>::max();
+			un->energy_cost_from_root = std::numeric_limits<double>::min();
+			un->predecessor_arc = nullptr;
+			un->main_path_check = false;
+		}
 	}
 }
 
@@ -933,11 +974,13 @@ void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
 		}
 
 		if (u->getActualArch() == nullptr) {
+			bool genNewPath = false;
 
 			//cout << "UAV" << u->getId() << " has no arc. Path list size: " << uavArcMapList[u->getId()].size() << endl << std::flush;
 
 			if (uavArcMapList[u->getId()].size() == 0) {
 				generateUavPath(time, u);
+				genNewPath = true;
 				/*
 				if (u->getState() == Uav::UAV_WAIT_HOME) { // check for the new path only for the UAV waiting at HOME
 					Home *waitingHome = u->getBelongingHome();
@@ -1009,13 +1052,13 @@ void FlowGraph::activateUavFlow(unsigned int time, std::list<Uav *> &uavList){
 				ArcGraph *ag = uavArcMapList[u->getId()].front();
 				uavArcMapList[u->getId()].pop_front();
 
-				//cout << "UAV" << u->getId() << " - Load next ARC "
-				//		<< ag->src->node_t << "-" << ag->src->node_id << "-" << ag->src->time << " -> "
-				//		<< ag->dest->node_t << "-" << ag->dest->node_id << "-" << ag->dest->time
-				//		<< endl << std::flush;
+				cout << endl << "UAV" << u->getId() << " - Load next ARC "
+						<< ag->src->node_t << "-" << ag->src->node_id << "-" << ag->src->time << " -> "
+						<< ag->dest->node_t << "-" << ag->dest->node_id << "-" << ag->dest->time
+						<< endl << std::flush;
 
 				if ((ag->src->node_t != u->getPositionNode()->node_t) || (ag->src->node_id != u->getPositionNode()->node_id) || (ag->src->time != u->getPositionNode()->time)) {
-					cerr << endl << time << " UAV " << u->getId() << " Wrong path... why?" << endl;
+					cerr << endl << time << " UAV " << u->getId() << " Wrong path... why? Generated new path:" << genNewPath << endl;
 					cerr << time << " UAV " << u->getId() << " Arc node: " << ag->src->node_t << "-" << ag->src->node_id << "-" << ag->src->time << endl;
 					cerr << time << " UAV " << u->getId() << " UAV node: " << u->getPositionNode()->node_t << "-" << u->getPositionNode()->node_id << "-" << u->getPositionNode()->time << endl;
 					exit(EXIT_FAILURE);

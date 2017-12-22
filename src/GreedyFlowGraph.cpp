@@ -40,58 +40,71 @@ void GreedyFlowGraph::generateUavPath(unsigned int time, Uav *u){
 				nodesEndGo.push_back(graphMapMapMap[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()].begin()->second);
 				nodesEndBack.push_back(ng);
 
-				//cout << endl << "Calculating minimum path for the UAV" << u->getId() << endl;
-				//cout << "Generating path from HOME" << ng->node_id << " to DeliveryPoint" << pckToCarry->dest_dp->getDpIdNum() << endl;
+				cout << endl << "Calculating minimum path for the UAV" << u->getId() << endl;
+				cout << "Generating path from HOME" << ng->node_id << " to DeliveryPoint" << pckToCarry->dest_dp->getDpIdNum() << endl;
 
 				getMinimumPathToFew_withEnergy(arcMapListGo, arcMapListCostGo, arcMapListEnergyCostGo, ng, nodesEndGo, false, true);
+				exit(EXIT_SUCCESS);
 				if (arcMapListGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()].size() > 0) {
 					NodeGraph *ngDParrived = arcMapListGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()].back()->dest;
 					getMinimumPathToFew_withEnergy(arcMapListBack, arcMapListCostBack, arcMapListEnergyCostBack, ngDParrived, nodesEndBack, true, false);
 					if (arcMapListBack[ng->node_t][ng->node_id].size() > 0) {
-						//TODO set: arcList, arcListTimeCost, arcListEnergyCost;
-						//arcListTimeCost = arcMapListCostGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()] +
-						//		arcMapListCostBack[ng->node_t][ng->node_id];
+
 						arcListEnergyCost = arcMapListEnergyCostGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()] +
 								arcMapListEnergyCostBack[ng->node_t][ng->node_id];
-						for (auto& itGO : arcMapListGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()]) {
-							arcList.push_back(itGO);
-						}
-						for (auto& itBACK : arcMapListBack[ng->node_t][ng->node_id]) {
-							arcList.push_back(itBACK);
+
+						// check if there is a battery with enough battery to carry this package
+						for (auto& b : waitingHome->bm->batteryList) {
+							//cout << endl << "UAV" << u->getId() << " check battery. Path cost: " << arcListEnergyCost << " - battery available: " << b->getResudualEnergy() << endl << std::flush;
+							if ((b->getResudualEnergy() + arcListEnergyCost) > 0) {
+								//TODO set: arcList, arcListTimeCost, arcListEnergyCost;
+								//arcListTimeCost = arcMapListCostGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()] +
+								//		arcMapListCostBack[ng->node_t][ng->node_id];
+
+								for (auto& itGO : arcMapListGo[NodeGraph::DELIVERY_POINT][pckToCarry->dest_dp->getDpIdNum()]) {
+									arcList.push_back(itGO);
+								}
+								for (auto& itBACK : arcMapListBack[ng->node_t][ng->node_id]) {
+									arcList.push_back(itBACK);
+								}
+
+
+								waitingHome->wa->wareHouse.erase(itP);
+
+								bToLoad = waitingHome->bm->popBattery(b->id_batt);
+								bToLoad->setState(Battery::BATTERY_DISCHARGING_ONUAV);
+
+								u->setBatt(bToLoad);
+								u->setCarryingPackage(pckToCarry);
+
+								break;
+							}
 						}
 					}
 				}
 
-				//cout  << "End calculating minimum path for the UAV" << u->getId() << ", generating path from HOME" << ng->node_id << " to DeliveryPoint" << pckToCarry->dest_dp->getDpIdNum() << endl;
+				cout  << "End calculating minimum path for the UAV" << u->getId() << ", generating path from HOME" << ng->node_id << " to DeliveryPoint" << pckToCarry->dest_dp->getDpIdNum() << endl;
 
 				//getMinimumPathOnlyFly_GoAndBack(arcList, arcListTimeCost, arcListEnergyCost, waitingHome, time, pckToCarry->dest_dp);
 
 				if (arcList.size() > 0) {
 					// check if there is a battery with enough battery to carry this package
-					for (auto& b : waitingHome->bm->batteryList) {
+					//for (auto& b : waitingHome->bm->batteryList) {
 
-						//cout << endl << "UAV" << u->getId() << " check battery. Path cost: " << arcListEnergyCost << " - battery available: " << b->getResudualEnergy() << endl << std::flush;
 
-						//if (b->getResudualEnergy() > arcListEnergyCost) {
-						if ((b->getResudualEnergy() + arcListEnergyCost) > 0) {
-							waitingHome->wa->wareHouse.erase(itP);
+					//if (b->getResudualEnergy() > arcListEnergyCost) {
+					//if ((b->getResudualEnergy() + arcListEnergyCost) > 0) {
 
-							bToLoad = waitingHome->bm->popBattery(b->id_batt);
-							bToLoad->setState(Battery::BATTERY_DISCHARGING_ONUAV);
-
-							u->setBatt(bToLoad);
-							u->setCarryingPackage(pckToCarry);
-
-							// set the path
-							for (auto itAL = arcList.begin(); itAL != arcList.end(); itAL++) {
-								uavArcMapList[u->getId()].push_back(*itAL);
-							}
-
-							//cout << "Path found for UAV" << u->getId() << endl << std::flush;
-
-							break;
-						}
+					// set the path
+					for (auto itAL = arcList.begin(); itAL != arcList.end(); itAL++) {
+						uavArcMapList[u->getId()].push_back(*itAL);
 					}
+
+					//cout << "Path found for UAV" << u->getId() << endl << std::flush;
+
+					//break;
+					//}
+					//}
 				}
 				else {
 					//UNDELIVERABLE PACKAGE
@@ -115,7 +128,7 @@ void GreedyFlowGraph::generateUavPath(unsigned int time, Uav *u){
 				}
 			}
 		}
-		/*else {
+		else {
 			// PRINT DEBUG
 			cout << "FINAL PATH for UAV" << u->getId() << endl;
 			for (auto a : uavArcMapList[u->getId()]) {
@@ -138,11 +151,11 @@ void GreedyFlowGraph::generateUavPath(unsigned int time, Uav *u){
 					break;
 				}
 				cout << "      " << a->src->node_t << "-" << a->src->node_id << "_" << a->src->time << "--" <<
-						lt << "|" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
+						lt << "|T" << (a->dest->time - a->src->time) << "|E" << a->getEnergyCost() << "-->" << a->dest->node_t << "-" << a->dest->node_id << "_" << a->dest->time << " | " << endl;
 			}
 			cout << endl;
 			cout << "FINAL PATH - FINISH" << endl;
-		}*/
+		}
 	}
 	else {
 		cerr << "Error: UAV" << u->getId() << " has no calculated path but it is not at HOME (act state " << u->getState() << ")" << endl;

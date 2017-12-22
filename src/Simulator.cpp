@@ -1433,7 +1433,7 @@ void Simulator::run(void) {
 		//std::strftime(buffer, sizeof(buffer), " %a, %d.%m.%Y %H:%M:%S", &t_tm);
 		//fprintf(stdout, "\rSimulation time: %u seconds - %s", t, buffer);fflush(stdout);
 		std::strftime(buffer, sizeof(buffer), "%a, %d.%m.%Y %H:%M:%S", &t_tm);
-		fprintf(stdout, "\rSimulation time: %05u s; %s; ", t, buffer);
+		fprintf(stdout, "\rSimulation time: %05u s; %s; t%05u; ", t, buffer, FlowGraph::day_tm2seconds(t_tm));
 		for (auto& h : homesMap) {
 			//fprintf(stdout, "{wa%d|%d} ", h.second.getHomeIdNum(), h.second.getWA_pktNumber());
 			fprintf(stdout, "{wa%d|p%d", h.second.getHomeIdNum(), h.second.getWA_pktNumber());

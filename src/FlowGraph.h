@@ -63,6 +63,7 @@ public:
 		bfs_state = NOT_VISITED;
 		main_path_check = false;
 		distenace_from_root = std::numeric_limits<int>::max();
+		energy_cost_from_root = std::numeric_limits<double>::min();
 		predecessor_arc = nullptr;
 		stop_ptr = nullptr;
 		home_ptr = nullptr;
@@ -89,6 +90,7 @@ public:
 	//BFS variables
 	BFS_STATE bfs_state;
 	int distenace_from_root;
+	double energy_cost_from_root;
 	ArcGraph *predecessor_arc;
 	bool main_path_check;
 };
