@@ -9,6 +9,7 @@
 #define UAV_H_
 
 #include <limits.h>
+#include <cmath>
 
 #include "BusRoute.h"
 
